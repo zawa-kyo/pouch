@@ -17,6 +17,8 @@ Use this file while building the first Go implementation of `pouch` from the con
 - The Go package exists to support the CLI and tests.
 - Keep the project focused on path creation.
 - Do not expand it into a general scaffolding tool.
+- Target macOS and Linux only for v0.1.0.
+- Do not add Windows-specific behavior unless the product scope changes.
 
 ## Product rules
 
@@ -41,8 +43,10 @@ Examples:
 - If a path is treated as a file, create missing parent directories first.
 - If the file does not exist, create it.
 - If the file already exists, leave it unchanged.
+- If the target path already exists as a directory, return an error.
 - If a path is treated as a directory, use `mkdir -p` semantics.
 - If the directory already exists, treat that as success.
+- If the target path already exists as a file, return an error.
 
 ### Non-goals
 
@@ -70,6 +74,7 @@ Expected behavior:
 - Write errors to stderr.
 - In dry-run mode, do not mutate the filesystem.
 - In verbose mode, print each planned or executed action in input order.
+- Process input paths in order and stop at the first error.
 
 ## Package API
 
@@ -95,6 +100,15 @@ const (
     KindDir
 )
 
+type Action int
+
+const (
+    ActionNone Action = iota
+    ActionCreateFile
+    ActionCreateDir
+    ActionSkipExisting
+)
+
 type Options struct {
     Mode     Mode
     DirPerm  os.FileMode
@@ -103,9 +117,9 @@ type Options struct {
 }
 
 type Result struct {
-    Path    string
-    Kind    Kind
-    Created bool
+    Path   string
+    Kind   Kind
+    Action Action
 }
 
 func Detect(path string) Kind
@@ -118,6 +132,10 @@ Notes:
 - `Detect` should remain deterministic and side-effect free.
 - `Create` should be the main unit of behavior.
 - `CreateMany` should preserve input order.
+- `CreateMany` should stop at the first error.
+- If `CreateMany` fails, it should return the successful results collected before the failure together with the error.
+- `Result.Action` should describe the intended or executed action.
+- In dry-run mode, `Result.Action` should still report what would happen.
 
 ## Implementation notes
 
@@ -191,6 +209,7 @@ Do not split packages further unless the code clearly demands it.
 - Use table-driven tests when they make the cases easier to scan.
 - Use `t.TempDir()` for filesystem isolation.
 - Cover detection logic, file creation, directory creation, parent directory creation, explicit mode overrides, ambiguous names, and dry-run behavior.
+- Cover type-conflict cases such as `--mode file` against an existing directory and `--mode dir` against an existing file.
 
 Representative cases:
 

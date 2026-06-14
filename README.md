@@ -1,6 +1,7 @@
 # pouch
 
 `pouch` is a small CLI that creates a file or directory from a path.
+It creates missing paths, but it leaves existing files unchanged.
 
 It uses one rule in auto mode:
 
@@ -71,6 +72,7 @@ If `pouch` treats a path as a file, it:
 1. Creates missing parent directories.
 2. Creates the file if it does not exist.
 3. Leaves the file unchanged if it already exists.
+4. Returns an error if the target path already exists as a directory.
 
 ### Directory paths
 
@@ -78,6 +80,7 @@ If `pouch` treats a path as a directory, it:
 
 1. Creates the directory with `mkdir -p` semantics.
 2. Succeeds if the directory already exists.
+3. Returns an error if the target path already exists as a file.
 
 ## CLI
 
@@ -100,10 +103,16 @@ Flags:
 - Exit `0` on full success.
 - Exit non-zero on the first error.
 - Write errors to stderr.
+- Process input paths in order and stop at the first error.
 
 ## Scope
 
 `pouch` is intentionally narrow.
+
+Supported operating systems:
+
+- macOS
+- Linux
 
 It includes:
 
@@ -119,6 +128,7 @@ It does not include:
 - project scaffolding
 - config files in the first release
 - interactive prompts in the first release
+- Windows support
 
 ## Project docs
 

@@ -17,6 +17,8 @@
 - Go パッケージは CLI とテストを支えるために置く。
 - プロジェクトの焦点はパス作成に絞る。
 - 汎用スキャフォールディングツールには広げない。
+- v0.1.0 の対応 OS は macOS と Linux に限定する。
+- プロダクトの範囲が変わらない限り、Windows 向けの挙動は追加しない。
 
 ## プロダクトルール
 
@@ -41,8 +43,10 @@
 - ファイルとして扱う場合は、先に足りない親ディレクトリを作る。
 - ファイルが存在しなければ作成する。
 - 既存ファイルがある場合は、何も変更しない。
+- 対象パスがディレクトリとして存在する場合は、エラーにする。
 - ディレクトリとして扱う場合は、`mkdir -p` 相当で作成する。
 - ディレクトリがすでに存在する場合は、成功として扱う。
+- 対象パスがファイルとして存在する場合は、エラーにする。
 
 ### 対象外
 
@@ -70,6 +74,7 @@
 - エラーは標準エラー出力へ書く。
 - dry-run ではファイルシステムを変更しない。
 - verbose では入力順に各操作の予定または実行内容を表示する。
+- 複数パスも入力順に処理し、最初のエラーで停止する。
 
 ## パッケージ API
 
@@ -95,6 +100,15 @@ const (
     KindDir
 )
 
+type Action int
+
+const (
+    ActionNone Action = iota
+    ActionCreateFile
+    ActionCreateDir
+    ActionSkipExisting
+)
+
 type Options struct {
     Mode     Mode
     DirPerm  os.FileMode
@@ -103,9 +117,9 @@ type Options struct {
 }
 
 type Result struct {
-    Path    string
-    Kind    Kind
-    Created bool
+    Path   string
+    Kind   Kind
+    Action Action
 }
 
 func Detect(path string) Kind
@@ -118,6 +132,10 @@ func CreateMany(paths []string, opts Options) ([]Result, error)
 - `Detect` は決定的で、副作用を持たないようにする。
 - 振る舞いの中心は `Create` に置く。
 - `CreateMany` は入力順を保つ。
+- `CreateMany` は最初のエラーで停止する。
+- `CreateMany` が失敗した場合は、失敗前までの成功結果を返したうえでエラーも返す。
+- `Result.Action` は、実行した操作または実行予定の操作を表す。
+- dry-run でも、`Result.Action` には実行した場合の内容を入れる。
 
 ## 実装メモ
 
@@ -191,6 +209,7 @@ func CreateMany(paths []string, opts Options) ([]Result, error)
 - 見通しがよくなる箇所ではテーブル駆動テストを使う。
 - ファイルシステムの隔離には `t.TempDir()` を使う。
 - 判定ロジック、ファイル作成、ディレクトリ作成、親ディレクトリ作成、明示モード上書き、曖昧な名前、dry-run 挙動をカバーする。
+- `--mode file` と既存ディレクトリの衝突、`--mode dir` と既存ファイルの衝突もカバーする。
 
 代表ケース:
 
