@@ -1,5 +1,12 @@
 # pouch Agent Guide
 
+## Documentation sync
+
+- Keep `README.md` and `README-ja.md` aligned in meaning.
+- Keep `AGENTS.md` and `AGENTS-ja.md` aligned in meaning.
+- When updating one file in a paired set, update the other in the same change unless the user explicitly asks for a temporary mismatch.
+- Prefer natural Japanese in `*-ja.md` files rather than line-by-line translation.
+
 ## Purpose
 
 This file captures the internal design and implementation expectations for `pouch`.
