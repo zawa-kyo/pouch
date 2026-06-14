@@ -48,6 +48,7 @@ Auto mode looks only at the final path segment.
 | `sample/temp.ts` | File             |
 | `.env`           | File             |
 
+> [!NOTE]
 > `pouch` keeps this rule intentionally small. It does not infer intent from well-known filenames, MIME types, or trailing slashes.
 
 ## When to use `--mode`
@@ -59,6 +60,9 @@ Some names are ambiguous under the auto rule:
 | `Dockerfile`   | Directory        | `--mode file`   |
 | `Makefile`     | Directory        | `--mode file`   |
 | `dir.with.dot` | File             | `--mode dir`    |
+
+> [!IMPORTANT]
+> `Dockerfile` and `Makefile` are treated as directories in auto mode. Use `--mode file` when you want file creation semantics.
 
 Use `--mode` when you want a different result:
 
@@ -87,13 +91,13 @@ Basic usage:
 pouch [flags] PATH...
 ```
 
-| Flag              | Meaning                                               |
-| ----------------- | ----------------------------------------------------- | ----- | ---------------------------- |
-| `-m, --mode <auto | file                                                  | dir>` | Force file or directory mode |
-| `-n, --dry-run`   | Print planned actions without changing the filesystem |
-| `-v, --verbose`   | Print each action in input order                      |
-| `-h, --help`      | Show help                                             |
-| `--version`       | Show version                                          |
+| Flag                           | Meaning                                               |
+| ------------------------------ | ----------------------------------------------------- |
+| `-m, --mode <auto\|file\|dir>` | Force file or directory mode                          |
+| `-n, --dry-run`                | Print planned actions without changing the filesystem |
+| `-v, --verbose`                | Print each action in input order                      |
+| `-h, --help`                   | Show help                                             |
+| `--version`                    | Show version                                          |
 
 ## Exit behavior
 
