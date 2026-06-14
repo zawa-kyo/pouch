@@ -2,16 +2,16 @@
 
 `pouch` is a simple, path-aware `touch` command.
 
-It creates either a directory or a file from a single path argument:
+Given one path, it creates either a directory or a file:
 
 - If the final path segment contains a dot (`.`), `pouch` treats it as a file path.
 - Otherwise, `pouch` treats it as a directory path.
 
-When creating a file, `pouch` also creates any missing parent directories automatically.
+When it creates a file, it also creates any missing parent directories.
 
 ## Why
 
-Creating paths usually requires switching between commands:
+Creating paths often means switching between commands:
 
 ```sh
 mkdir -p sample
@@ -19,7 +19,7 @@ mkdir -p "$(dirname sample/temp.ts)" && touch sample/temp.ts
 touch sample.ts
 ```
 
-`pouch` collapses that into one mental model:
+`pouch` reduces that to one rule:
 
 ```sh
 pouch sample
@@ -27,7 +27,7 @@ pouch sample.ts
 pouch sample/temp.ts
 ```
 
-The command is intentionally small and opinionated.
+The command stays small by design.
 
 ## Behavior
 
@@ -59,7 +59,7 @@ If a path is treated as a directory:
 
 ## Non-goals
 
-`pouch` does not try to solve every path-creation case.
+`pouch` does not try to solve every path creation case.
 
 Out of scope for the default auto mode:
 
@@ -71,7 +71,7 @@ Out of scope for the default auto mode:
 
 ## Known limitations
 
-The auto-detection rule is intentionally simple, so it has tradeoffs.
+The auto-detection rule is intentionally simple, so it comes with tradeoffs.
 
 Examples:
 
@@ -79,7 +79,7 @@ Examples:
 - `Makefile` is treated as a directory in auto mode
 - `dir.with.dot` is treated as a file in auto mode
 
-To handle those cases, `pouch` should support explicit mode overrides.
+Those cases should be handled with explicit mode overrides.
 
 ## CLI
 
@@ -98,7 +98,7 @@ pouch sample/temp.ts
 pouch src/index.ts test/index.test.ts docs
 ```
 
-### Proposed flags
+### Planned flags
 
 ```sh
 pouch [flags] PATH...
@@ -107,7 +107,7 @@ pouch [flags] PATH...
 Flags:
 
 - `-m, --mode <auto|file|dir>`
-  Force path interpretation instead of using auto detection.
+  Force file or directory mode instead of using auto detection.
 - `-n, --dry-run`
   Print planned actions without changing the filesystem.
 - `-v, --verbose`
@@ -119,7 +119,7 @@ Flags:
 - `--version`
   Show version.
 
-### Recommended behavior for explicit mode
+### Explicit mode examples
 
 Examples:
 
@@ -130,13 +130,13 @@ pouch --mode dir dir.with.dot
 
 ## Exit behavior
 
-Recommended initial behavior:
+Initial behavior:
 
 - Exit `0` if all paths are processed successfully.
 - Exit non-zero on the first error.
 - Print a clear error message to stderr.
 
-Future expansion could add:
+Possible future expansion:
 
 - `--continue-on-error`
 
@@ -150,7 +150,7 @@ That should not be part of the first release unless there is a clear need.
 pouch sample
 ```
 
-Equivalent intent:
+Equivalent command:
 
 ```sh
 mkdir -p sample
@@ -162,7 +162,7 @@ mkdir -p sample
 pouch sample.ts
 ```
 
-Equivalent intent:
+Equivalent command:
 
 ```sh
 touch sample.ts
@@ -174,7 +174,7 @@ touch sample.ts
 pouch sample/temp.ts
 ```
 
-Equivalent intent:
+Equivalent command:
 
 ```sh
 mkdir -p sample
@@ -203,7 +203,7 @@ Core principles:
 - Prefer predictable rules over clever inference
 - Keep auto mode simple and documented
 - Offer explicit overrides for ambiguous cases
-- Match standard filesystem behavior as closely as possible
+- Match standard filesystem behavior where it makes sense
 - Be useful as both a CLI and a Go package
 
 ## Positioning
@@ -212,6 +212,6 @@ Short description:
 
 > `pouch` is a path-aware `touch` command.
 
-Slightly longer description:
+A slightly longer description:
 
 > `pouch` creates directories or files from path-like arguments using a simple, explicit detection rule.

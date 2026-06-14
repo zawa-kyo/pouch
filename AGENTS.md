@@ -9,8 +9,8 @@
 
 ## Purpose
 
-This file captures the internal design and implementation expectations for `pouch`.
-Use it while building the initial Go implementation from the external contract in `README.md`.
+This file defines the design and implementation expectations for `pouch`.
+Use it while building the initial Go implementation from the contract in `README.md`.
 
 ## Product boundary
 
@@ -38,7 +38,7 @@ Use it while building the initial Go implementation from the external contract i
 
 ## API direction
 
-Prefer a small public surface.
+Keep the public surface small.
 
 Suggested package:
 
@@ -202,7 +202,7 @@ Suggested responsibilities:
 - `internal/cli/flags.go`
   CLI flag parsing and validation.
 
-Avoid splitting packages further unless the code clearly demands it.
+Do not split packages further unless the code clearly demands it.
 
 ## Implementation notes
 
@@ -223,7 +223,7 @@ Recommended approach:
 
 ### Timestamps
 
-Make touch behavior deliberate.
+Treat touch behavior deliberately.
 
 - A newly created file should count as `Created`.
 - An existing file with timestamp update should count as `Touched`.
@@ -233,12 +233,12 @@ Make touch behavior deliberate.
 
 - `CreateMany` should process inputs in order.
 - Stop on the first error for v0.1.0.
-- Return all successful results collected before the failure only if that shape is useful to the CLI.
-- If the API becomes awkward, prefer a simpler contract and keep partial reporting inside the CLI layer.
+- Return successful results collected before the failure only if that shape is useful to the CLI.
+- If that makes the API awkward, keep the API simpler and handle partial reporting in the CLI layer.
 
 ## Testing strategy
 
-Use table-driven tests where they keep the cases easy to scan.
+Use table-driven tests when they make the cases easier to scan.
 Use `t.TempDir()` for filesystem isolation.
 
 Required test coverage:
