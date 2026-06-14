@@ -26,6 +26,35 @@ pouch src/main.go test
 | `pouch notes/today.md`   | 親ディレクトリを作成してから `today.md` を作成する |
 | `pouch src/main.go test` | 各パスを入力順に処理する                           |
 
+## インストール
+
+### Go
+
+```sh
+go install github.com/zawa-kyo/pouch/cmd/pouch@latest
+```
+
+### mise
+
+まずは GitHub backend を直接使えます。
+
+```sh
+mise use -g github:zawa-kyo/pouch@latest
+```
+
+短いツール名で使いたい場合は、mise の設定に alias を追加します。
+
+```toml
+[tool_alias]
+pouch = "github:zawa-kyo/pouch"
+```
+
+その後、次のようにインストールして有効化できます。
+
+```sh
+mise use -g pouch@latest
+```
+
 ## 目的
 
 パスを作るだけでも、通常は複数のコマンドを使い分けることになる。

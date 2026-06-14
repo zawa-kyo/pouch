@@ -10,7 +10,10 @@ import (
 	"github.com/zawa-kyo/pouch/internal/cli"
 )
 
-const version = "dev"
+var version = "dev"
+
+const infoPrefix = "󰄳"
+const warnPrefix = "󰅙"
 
 func main() {
 	os.Exit(run(os.Args[1:], os.Stdout, os.Stderr))
@@ -27,9 +30,9 @@ func run(args []string, stdout, stderr io.Writer) int {
 	config, err := cli.Parse(args, stdout, stderr)
 	if err != nil {
 		if errors.Is(err, os.ErrInvalid) {
-			fmt.Fprintln(stderr, err)
+			warn(stderr, err)
 		} else if err.Error() != "flag: help requested" {
-			fmt.Fprintln(stderr, err)
+			warn(stderr, err)
 		}
 		if err.Error() == "flag: help requested" {
 			return 0
@@ -44,24 +47,28 @@ func run(args []string, stdout, stderr io.Writer) int {
 		}
 	}
 	if err != nil {
-		fmt.Fprintln(stderr, err)
+		warn(stderr, err)
 		return 1
 	}
 	return 0
 }
 
+func warn(stderr io.Writer, err error) {
+	fmt.Fprintf(stderr, "%s %v\n", warnPrefix, err)
+}
+
 func formatResult(result pouch.Result) string {
 	switch result.Action {
 	case pouch.ActionCreateFile:
-		return fmt.Sprintf("create file %s", result.Path)
+		return fmt.Sprintf("%s create file %s", infoPrefix, result.Path)
 	case pouch.ActionCreateDir:
-		return fmt.Sprintf("create dir %s", result.Path)
+		return fmt.Sprintf("%s create dir %s", infoPrefix, result.Path)
 	case pouch.ActionSkipExisting:
 		if result.Kind == pouch.KindDir {
-			return fmt.Sprintf("skip existing dir %s", result.Path)
+			return fmt.Sprintf("%s skip existing dir %s", infoPrefix, result.Path)
 		}
-		return fmt.Sprintf("skip existing file %s", result.Path)
+		return fmt.Sprintf("%s skip existing file %s", infoPrefix, result.Path)
 	default:
-		return fmt.Sprintf("noop %s", result.Path)
+		return fmt.Sprintf("%s noop %s", infoPrefix, result.Path)
 	}
 }
