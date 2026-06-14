@@ -54,7 +54,7 @@ jobs:
           workdir="dist/${GOOS}_${GOARCH}"
 
           mkdir -p "${workdir}"
-          go build -o "${workdir}/pouch" ./cmd/pouch
+          go build -ldflags="-X main.version=${TAG_NAME}" -o "${workdir}/pouch" ./cmd/pouch
           tar -C "${workdir}" -czf "${archive}" pouch
 
       - name: Upload archive to release
