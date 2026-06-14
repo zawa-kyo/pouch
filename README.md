@@ -1,4 +1,4 @@
-# pouch
+# 👜 pouch
 
 `pouch` is a small CLI that creates a file or directory from a path.
 It creates missing paths, but it leaves existing files unchanged.
