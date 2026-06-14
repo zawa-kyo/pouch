@@ -26,6 +26,35 @@ pouch src/main.go test
 | `pouch notes/today.md`   | Creates parent directories, then `today.md` |
 | `pouch src/main.go test` | Processes each path in input order          |
 
+## Installation
+
+### Go
+
+```sh
+go install github.com/zawa-kyo/pouch/cmd/pouch@latest
+```
+
+### mise
+
+Use the GitHub backend directly:
+
+```sh
+mise use -g github:zawa-kyo/pouch@latest
+```
+
+If you prefer a short tool name, add an alias to your mise config:
+
+```toml
+[tool_alias]
+pouch = "github:zawa-kyo/pouch"
+```
+
+Then install and activate it with:
+
+```sh
+mise use -g pouch@latest
+```
+
 ## Why it exists
 
 Creating paths often means switching between commands:
