@@ -1,9 +1,11 @@
 package pouch
 
+// Create creates a file or directory for a single path.
 func Create(path string, opts Options) (Result, error) {
 	return create(path, withDefaults(opts))
 }
 
+// CreateMany processes paths in order and stops at the first error.
 func CreateMany(paths []string, opts Options) ([]Result, error) {
 	results := make([]Result, 0, len(paths))
 	opts = withDefaults(opts)

@@ -10,12 +10,14 @@ import (
 	"github.com/zawa-kyo/pouch"
 )
 
+// Config is the parsed CLI input for one invocation.
 type Config struct {
 	Paths   []string
 	Options pouch.Options
 	Verbose bool
 }
 
+// Parse converts CLI arguments into a validated Config.
 func Parse(args []string, stdout, stderr io.Writer) (Config, error) {
 	fs := flag.NewFlagSet("pouch", flag.ContinueOnError)
 	fs.SetOutput(stderr)
