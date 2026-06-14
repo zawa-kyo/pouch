@@ -5,8 +5,10 @@ It creates missing paths, but it leaves existing files unchanged.
 
 It uses one rule in auto mode:
 
-- If the final path segment contains a dot (`.`), treat the path as a file.
-- Otherwise, treat the path as a directory.
+| Final path segment     | Result               |
+| ---------------------- | -------------------- |
+| Contains a dot (`.`)   | Treat as a file      |
+| Does not contain a dot | Treat as a directory |
 
 That rule lets you create common paths without stopping to choose between `mkdir -p` and `touch`.
 
@@ -18,11 +20,11 @@ pouch notes/today.md
 pouch src/main.go test
 ```
 
-What those commands do:
-
-- `pouch notes` creates the `notes` directory.
-- `pouch notes/today.md` creates parent directories and then creates `today.md`.
-- `pouch src/main.go test` handles each path in order.
+| Command                  | Result                                      |
+| ------------------------ | ------------------------------------------- |
+| `pouch notes`            | Creates the `notes` directory               |
+| `pouch notes/today.md`   | Creates parent directories, then `today.md` |
+| `pouch src/main.go test` | Processes each path in input order          |
 
 ## Why it exists
 
@@ -39,22 +41,24 @@ mkdir -p src && touch src/main.go
 
 Auto mode looks only at the final path segment.
 
-Examples:
+| Path             | Auto mode result |
+| ---------------- | ---------------- |
+| `sample`         | Directory        |
+| `sample.ts`      | File             |
+| `sample/temp.ts` | File             |
+| `.env`           | File             |
 
-- `sample` -> directory
-- `sample.ts` -> file
-- `sample/temp.ts` -> file
-- `.env` -> file
-
-`pouch` keeps this rule intentionally small. It does not try to infer intent from well-known filenames, MIME types, or trailing slashes.
+> `pouch` keeps this rule intentionally small. It does not infer intent from well-known filenames, MIME types, or trailing slashes.
 
 ## When to use `--mode`
 
 Some names are ambiguous under the auto rule:
 
-- `Dockerfile` becomes a directory in auto mode.
-- `Makefile` becomes a directory in auto mode.
-- `dir.with.dot` becomes a file in auto mode.
+| Path           | Auto mode result | Common override |
+| -------------- | ---------------- | --------------- |
+| `Dockerfile`   | Directory        | `--mode file`   |
+| `Makefile`     | Directory        | `--mode file`   |
+| `dir.with.dot` | File             | `--mode dir`    |
 
 Use `--mode` when you want a different result:
 
@@ -65,22 +69,15 @@ pouch --mode dir dir.with.dot
 
 ## Behavior
 
-### File paths
-
-If `pouch` treats a path as a file, it:
-
-1. Creates missing parent directories.
-2. Creates the file if it does not exist.
-3. Leaves the file unchanged if it already exists.
-4. Returns an error if the target path already exists as a directory.
-
-### Directory paths
-
-If `pouch` treats a path as a directory, it:
-
-1. Creates the directory with `mkdir -p` semantics.
-2. Succeeds if the directory already exists.
-3. Returns an error if the target path already exists as a file.
+| Target kind | Behavior                                                   |
+| ----------- | ---------------------------------------------------------- |
+| File        | Creates missing parent directories                         |
+| File        | Creates the file if it does not exist                      |
+| File        | Leaves an existing file unchanged                          |
+| File        | Returns an error if the path already exists as a directory |
+| Directory   | Creates the directory with `mkdir -p` semantics            |
+| Directory   | Succeeds if the directory already exists                   |
+| Directory   | Returns an error if the path already exists as a file      |
 
 ## CLI
 
@@ -90,13 +87,13 @@ Basic usage:
 pouch [flags] PATH...
 ```
 
-Flags:
-
-- `-m, --mode <auto|file|dir>`: force file or directory mode.
-- `-n, --dry-run`: print planned actions without changing the filesystem.
-- `-v, --verbose`: print each action in input order.
-- `-h, --help`: show help.
-- `--version`: show version.
+| Flag              | Meaning                                               |
+| ----------------- | ----------------------------------------------------- | ----- | ---------------------------- |
+| `-m, --mode <auto | file                                                  | dir>` | Force file or directory mode |
+| `-n, --dry-run`   | Print planned actions without changing the filesystem |
+| `-v, --verbose`   | Print each action in input order                      |
+| `-h, --help`      | Show help                                             |
+| `--version`       | Show version                                          |
 
 ## Exit behavior
 
@@ -109,26 +106,14 @@ Flags:
 
 `pouch` is intentionally narrow.
 
-Supported operating systems:
-
-- macOS
-- Linux
-
-It includes:
-
-- path creation from CLI arguments
-- simple auto detection
-- explicit mode overrides
-- a reusable Go package for the CLI and tests
-
-It does not include:
-
-- template generation
-- file content generation
-- project scaffolding
-- config files in the first release
-- interactive prompts in the first release
-- Windows support
+| Included in v0.1                          | Not included in v0.1    |
+| ----------------------------------------- | ----------------------- |
+| macOS support                             | Windows support         |
+| Linux support                             | Template generation     |
+| Path creation from CLI arguments          | File content generation |
+| Simple auto detection                     | Project scaffolding     |
+| Explicit mode overrides                   | Config files            |
+| Reusable Go package for the CLI and tests | Interactive prompts     |
 
 ## Project docs
 
