@@ -1,4 +1,4 @@
-# pouch
+# 👜 pouch
 
 `pouch` is a small CLI that creates a file or directory from a path.
 It creates missing paths, but it leaves existing files unchanged.
@@ -147,10 +147,3 @@ pouch [flags] PATH...
 | Simple auto detection                     | Project scaffolding     |
 | Explicit mode overrides                   | Config files            |
 | Reusable Go package for the CLI and tests | Interactive prompts     |
-
-## Project docs
-
-- Repository overview: `README.md`
-- Japanese overview: `README-ja.md`
-- Agent guidance: `AGENTS.md`
-- Japanese agent guidance: `AGENTS-ja.md`
