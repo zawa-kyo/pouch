@@ -1,0 +1,65 @@
+name: Release Assets
+
+on:
+  release:
+    types:
+      - published
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to upload assets to
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-upload:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - goos: darwin
+            goarch: amd64
+          - goos: darwin
+            goarch: arm64
+          - goos: linux
+            goarch: amd64
+          - goos: linux
+            goarch: arm64
+
+    env:
+      TAG_NAME: ${{ github.event_name == 'release' && github.event.release.tag_name || inputs.tag }}
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG_NAME }}
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Build archive
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+        run: |
+          set -euo pipefail
+          archive="pouch_${GOOS}_${GOARCH}.tar.gz"
+          workdir="dist/${GOOS}_${GOARCH}"
+
+          mkdir -p "${workdir}"
+          go build -o "${workdir}/pouch" ./cmd/pouch
+          tar -C "${workdir}" -czf "${archive}" pouch
+
+      - name: Upload archive to release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh release upload "${TAG_NAME}" "pouch_${{ matrix.goos }}_${{ matrix.goarch }}.tar.gz" --clobber
