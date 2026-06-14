@@ -35,12 +35,12 @@ jobs:
 
     steps:
       - name: Check out source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: ${{ env.TAG_NAME }}
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
 
@@ -54,7 +54,7 @@ jobs:
           workdir="dist/${GOOS}_${GOARCH}"
 
           mkdir -p "${workdir}"
-          go build -o "${workdir}/pouch" ./cmd/pouch
+          go build -ldflags="-X main.version=${TAG_NAME}" -o "${workdir}/pouch" ./cmd/pouch
           tar -C "${workdir}" -czf "${archive}" pouch
 
       - name: Upload archive to release
