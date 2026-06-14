@@ -7,7 +7,7 @@ import (
 	"io"
 	"strings"
 
-	"github.com/zawa-kyo/pouch/pkg/pouch"
+	"github.com/zawa-kyo/pouch"
 )
 
 type Config struct {
@@ -16,9 +16,9 @@ type Config struct {
 	Verbose bool
 }
 
-func Parse(args []string, stdout io.Writer) (Config, error) {
+func Parse(args []string, stdout, stderr io.Writer) (Config, error) {
 	fs := flag.NewFlagSet("pouch", flag.ContinueOnError)
-	fs.SetOutput(stdout)
+	fs.SetOutput(stderr)
 
 	mode := fs.String("mode", "auto", "")
 	fs.StringVar(mode, "m", "auto", "")
@@ -29,24 +29,18 @@ func Parse(args []string, stdout io.Writer) (Config, error) {
 	verbose := fs.Bool("verbose", false, "")
 	fs.BoolVar(verbose, "v", false, "")
 
-	fs.Usage = func() {
-		fmt.Fprintln(stdout, "Usage: pouch [flags] PATH...")
-		fmt.Fprintln(stdout)
-		fmt.Fprintln(stdout, "Flags:")
-		fmt.Fprintln(stdout, "  -m, --mode auto|file|dir")
-		fmt.Fprintln(stdout, "      Force file or directory mode.")
-		fmt.Fprintln(stdout, "  -n, --dry-run")
-		fmt.Fprintln(stdout, "      Print planned actions without changing the filesystem.")
-		fmt.Fprintln(stdout, "  -v, --verbose")
-		fmt.Fprintln(stdout, "      Print each action in input order.")
-		fmt.Fprintln(stdout, "  -h, --help")
-		fmt.Fprintln(stdout, "      Show help.")
-		fmt.Fprintln(stdout, "      --version")
-		fmt.Fprintln(stdout, "      Show version.")
-	}
+	help := fs.Bool("help", false, "")
+	fs.BoolVar(help, "h", false, "")
+
+	fs.Usage = func() { writeUsage(stderr) }
 
 	if err := fs.Parse(args); err != nil {
 		return Config{}, err
+	}
+
+	if *help {
+		writeUsage(stdout)
+		return Config{}, flag.ErrHelp
 	}
 
 	paths := fs.Args()
@@ -67,6 +61,22 @@ func Parse(args []string, stdout io.Writer) (Config, error) {
 		},
 		Verbose: *verbose,
 	}, nil
+}
+
+func writeUsage(w io.Writer) {
+	fmt.Fprintln(w, "Usage: pouch [flags] PATH...")
+	fmt.Fprintln(w)
+	fmt.Fprintln(w, "Flags:")
+	fmt.Fprintln(w, "  -m, --mode auto|file|dir")
+	fmt.Fprintln(w, "      Force file or directory mode.")
+	fmt.Fprintln(w, "  -n, --dry-run")
+	fmt.Fprintln(w, "      Print planned actions without changing the filesystem.")
+	fmt.Fprintln(w, "  -v, --verbose")
+	fmt.Fprintln(w, "      Print each action in input order.")
+	fmt.Fprintln(w, "  -h, --help")
+	fmt.Fprintln(w, "      Show help.")
+	fmt.Fprintln(w, "      --version")
+	fmt.Fprintln(w, "      Show version.")
 }
 
 func parseMode(value string) (pouch.Mode, error) {

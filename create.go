@@ -74,6 +74,13 @@ func createFile(path string, opts Options, result Result) (Result, error) {
 
 	file, err := os.OpenFile(path, os.O_CREATE|os.O_EXCL|os.O_WRONLY, opts.FilePerm)
 	if err != nil {
+		if errors.Is(err, os.ErrExist) {
+			info, statErr := os.Lstat(path)
+			if statErr != nil {
+				return Result{}, fmt.Errorf("inspect %q after create race: %w", path, statErr)
+			}
+			return handleExisting(path, info, result.Kind, result)
+		}
 		return Result{}, fmt.Errorf("create file %q: %w", path, err)
 	}
 	if err := file.Close(); err != nil {

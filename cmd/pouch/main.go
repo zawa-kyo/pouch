@@ -3,10 +3,11 @@ package main
 import (
 	"errors"
 	"fmt"
+	"io"
 	"os"
 
+	"github.com/zawa-kyo/pouch"
 	"github.com/zawa-kyo/pouch/internal/cli"
-	"github.com/zawa-kyo/pouch/pkg/pouch"
 )
 
 const version = "dev"
@@ -15,7 +16,7 @@ func main() {
 	os.Exit(run(os.Args[1:], os.Stdout, os.Stderr))
 }
 
-func run(args []string, stdout, stderr *os.File) int {
+func run(args []string, stdout, stderr io.Writer) int {
 	for _, arg := range args {
 		if arg == "--version" {
 			fmt.Fprintln(stdout, version)
@@ -23,7 +24,7 @@ func run(args []string, stdout, stderr *os.File) int {
 		}
 	}
 
-	config, err := cli.Parse(args, stdout)
+	config, err := cli.Parse(args, stdout, stderr)
 	if err != nil {
 		if errors.Is(err, os.ErrInvalid) {
 			fmt.Fprintln(stderr, err)
