@@ -1,39 +1,42 @@
 # pouch
 
-`pouch` is a simple, path-aware `touch` command.
+`pouch` is a small CLI that creates a file or directory from a path.
 
-Given one path, it creates either a directory or a file:
+It uses one rule in auto mode:
 
-- If the final path segment contains a dot (`.`), `pouch` treats it as a file path.
-- Otherwise, `pouch` treats it as a directory path.
+- If the final path segment contains a dot (`.`), treat the path as a file.
+- Otherwise, treat the path as a directory.
 
-When it creates a file, it also creates any missing parent directories.
+That rule lets you create common paths without stopping to choose between `mkdir -p` and `touch`.
 
-## Why
+## Examples
+
+```sh
+pouch notes
+pouch notes/today.md
+pouch src/main.go test
+```
+
+What those commands do:
+
+- `pouch notes` creates the `notes` directory.
+- `pouch notes/today.md` creates parent directories and then creates `today.md`.
+- `pouch src/main.go test` handles each path in order.
+
+## Why it exists
 
 Creating paths often means switching between commands:
 
 ```sh
-mkdir -p sample
-mkdir -p "$(dirname sample/temp.ts)" && touch sample/temp.ts
-touch sample.ts
+mkdir -p notes
+mkdir -p src && touch src/main.go
 ```
 
-`pouch` reduces that to one rule:
+`pouch` reduces that to one command with one detection rule.
 
-```sh
-pouch sample
-pouch sample.ts
-pouch sample/temp.ts
-```
+## How auto mode works
 
-The command stays small by design.
-
-## Behavior
-
-### Auto detection
-
-`pouch` inspects the final path segment.
+Auto mode looks only at the final path segment.
 
 Examples:
 
@@ -42,63 +45,43 @@ Examples:
 - `sample/temp.ts` -> file
 - `.env` -> file
 
-### File path behavior
+`pouch` keeps this rule intentionally small. It does not try to infer intent from well-known filenames, MIME types, or trailing slashes.
 
-If a path is treated as a file:
+## When to use `--mode`
 
-1. Create parent directories with `mkdir -p` semantics.
-2. Create the file if it does not exist.
-3. If the file already exists, update its modification time like `touch`.
+Some names are ambiguous under the auto rule:
 
-### Directory path behavior
+- `Dockerfile` becomes a directory in auto mode.
+- `Makefile` becomes a directory in auto mode.
+- `dir.with.dot` becomes a file in auto mode.
 
-If a path is treated as a directory:
+Use `--mode` when you want a different result:
 
-1. Create the directory with `mkdir -p` semantics.
-2. Do nothing if it already exists.
+```sh
+pouch --mode file Dockerfile
+pouch --mode dir dir.with.dot
+```
 
-## Non-goals
+## Behavior
 
-`pouch` does not try to solve every path creation case.
+### File paths
 
-Out of scope for the default auto mode:
+If `pouch` treats a path as a file, it:
 
-- Detecting extensionless files automatically
-- Inferring file type from content or MIME
-- Generating templates or starter code
-- Language-aware scaffolding
-- Project bootstrapping
+1. Creates missing parent directories.
+2. Creates the file if it does not exist.
+3. Leaves the file unchanged if it already exists.
 
-## Known limitations
+### Directory paths
 
-The auto-detection rule is intentionally simple, so it comes with tradeoffs.
+If `pouch` treats a path as a directory, it:
 
-Examples:
-
-- `Dockerfile` is treated as a directory in auto mode
-- `Makefile` is treated as a directory in auto mode
-- `dir.with.dot` is treated as a file in auto mode
-
-Those cases should be handled with explicit mode overrides.
+1. Creates the directory with `mkdir -p` semantics.
+2. Succeeds if the directory already exists.
 
 ## CLI
 
-### Basic usage
-
-```sh
-pouch PATH...
-```
-
-Examples:
-
-```sh
-pouch sample
-pouch sample.ts
-pouch sample/temp.ts
-pouch src/index.ts test/index.test.ts docs
-```
-
-### Planned flags
+Basic usage:
 
 ```sh
 pouch [flags] PATH...
@@ -106,112 +89,40 @@ pouch [flags] PATH...
 
 Flags:
 
-- `-m, --mode <auto|file|dir>`
-  Force file or directory mode instead of using auto detection.
-- `-n, --dry-run`
-  Print planned actions without changing the filesystem.
-- `-v, --verbose`
-  Print each action as it happens.
-- `--no-touch`
-  When the file already exists, do not update its modification time.
-- `-h, --help`
-  Show help.
-- `--version`
-  Show version.
-
-### Explicit mode examples
-
-Examples:
-
-```sh
-pouch --mode file Dockerfile
-pouch --mode dir dir.with.dot
-```
+- `-m, --mode <auto|file|dir>`: force file or directory mode.
+- `-n, --dry-run`: print planned actions without changing the filesystem.
+- `-v, --verbose`: print each action in input order.
+- `-h, --help`: show help.
+- `--version`: show version.
 
 ## Exit behavior
 
-Initial behavior:
-
-- Exit `0` if all paths are processed successfully.
+- Exit `0` on full success.
 - Exit non-zero on the first error.
-- Print a clear error message to stderr.
+- Write errors to stderr.
 
-Possible future expansion:
+## Scope
 
-- `--continue-on-error`
+`pouch` is intentionally narrow.
 
-That should not be part of the first release unless there is a clear need.
+It includes:
 
-## Examples
+- path creation from CLI arguments
+- simple auto detection
+- explicit mode overrides
+- a reusable Go package for the CLI and tests
 
-### Create a directory
+It does not include:
 
-```sh
-pouch sample
-```
+- template generation
+- file content generation
+- project scaffolding
+- config files in the first release
+- interactive prompts in the first release
 
-Equivalent command:
+## Project docs
 
-```sh
-mkdir -p sample
-```
-
-### Create a file in the current directory
-
-```sh
-pouch sample.ts
-```
-
-Equivalent command:
-
-```sh
-touch sample.ts
-```
-
-### Create a file and all missing parents
-
-```sh
-pouch sample/temp.ts
-```
-
-Equivalent command:
-
-```sh
-mkdir -p sample
-touch sample/temp.ts
-```
-
-### Create an extensionless file explicitly
-
-```sh
-pouch --mode file Dockerfile
-```
-
-### Create a dot-containing directory explicitly
-
-```sh
-pouch --mode dir dir.with.dot
-```
-
-## Design principles
-
-`pouch` should stay small.
-
-Core principles:
-
-- One job: create a path
-- Prefer predictable rules over clever inference
-- Keep auto mode simple and documented
-- Offer explicit overrides for ambiguous cases
-- Match standard filesystem behavior where it makes sense
-- Be useful as both a CLI and a Go package
-
-## Positioning
-
-Short description:
-
-> `pouch` is a path-aware `touch` command.
-
-A slightly longer description:
-
-> `pouch` creates directories or files from path-like arguments using a simple, explicit detection rule.
+- Repository overview: `README.md`
+- Japanese overview: `README-ja.md`
+- Agent guidance: `AGENTS.md`
+- Japanese agent guidance: `AGENTS-ja.md`

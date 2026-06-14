@@ -4,30 +4,47 @@
 
 - Keep `README.md` and `README-ja.md` aligned in meaning.
 - Keep `AGENTS.md` and `AGENTS-ja.md` aligned in meaning.
-- When updating one file in a paired set, update the other in the same change unless the user explicitly asks for a temporary mismatch.
+- Update both files in a language pair within the same change unless the user explicitly asks for a temporary mismatch.
 - Prefer natural Japanese in `*-ja.md` files rather than line-by-line translation.
 
 ## Purpose
 
-This file defines the design and implementation expectations for `pouch`.
-Use it while building the initial Go implementation from the contract in `README.md`.
+Use this file while building the first Go implementation of `pouch` from the contract in `README.md`.
 
-## Product boundary
+## Scope
 
 - `pouch` is primarily a CLI.
-- The reusable Go package exists to support the CLI and tests.
-- Do not grow this project into a general scaffolding tool.
-- Keep the implementation centered on path creation only.
+- The Go package exists to support the CLI and tests.
+- Keep the project focused on path creation.
+- Do not expand it into a general scaffolding tool.
 
-## Primary behavior
+## Product rules
+
+### Detection
 
 - In auto mode, inspect only the final path segment.
 - If the final segment contains a dot, treat the path as a file.
 - Otherwise, treat the path as a directory.
-- If a path is treated as a file, create missing parent directories first.
-- If a path is treated as a directory, use `mkdir -p` semantics.
+- Do not add heuristics for hidden files, well-known filenames, or trailing slashes unless the external spec changes.
 
-## Non-goals
+Examples:
+
+- `sample` -> directory
+- `sample.ts` -> file
+- `sample/temp.ts` -> file
+- `.env` -> file
+- `Dockerfile` -> directory in auto mode
+- `dir.with.dot` -> file in auto mode
+
+### Filesystem behavior
+
+- If a path is treated as a file, create missing parent directories first.
+- If the file does not exist, create it.
+- If the file already exists, leave it unchanged.
+- If a path is treated as a directory, use `mkdir -p` semantics.
+- If the directory already exists, treat that as success.
+
+### Non-goals
 
 - No template generation
 - No file content generation
@@ -36,17 +53,27 @@ Use it while building the initial Go implementation from the contract in `README
 - No config file in the first release
 - No interactive mode in the first release
 
-## API direction
+## CLI contract
+
+Expected flags:
+
+- `--mode auto|file|dir`
+- `--dry-run`
+- `--verbose`
+- `--help`
+- `--version`
+
+Expected behavior:
+
+- Exit `0` on full success.
+- Exit non-zero on the first error.
+- Write errors to stderr.
+- In dry-run mode, do not mutate the filesystem.
+- In verbose mode, print each planned or executed action in input order.
+
+## Package API
 
 Keep the public surface small.
-
-Suggested package:
-
-```go
-package pouch
-```
-
-Suggested API:
 
 ```go
 package pouch
@@ -72,7 +99,6 @@ type Options struct {
     Mode     Mode
     DirPerm  os.FileMode
     FilePerm os.FileMode
-    Touch    bool
     DryRun   bool
 }
 
@@ -80,7 +106,6 @@ type Result struct {
     Path    string
     Kind    Kind
     Created bool
-    Touched bool
 }
 
 func Detect(path string) Kind
@@ -94,59 +119,22 @@ Notes:
 - `Create` should be the main unit of behavior.
 - `CreateMany` should preserve input order.
 
-## Detection rules
+## Implementation notes
 
-Reference logic:
+### Path handling
 
-1. Compute `filepath.Base(path)`.
-2. If the base contains a dot, return file.
-3. Otherwise, return directory.
+- Use `path/filepath` from the standard library.
+- Avoid shelling out to `mkdir`, `touch`, or other OS utilities.
+- Prefer standard library behavior over custom path normalization.
 
-Important examples:
+### File creation
 
-- `sample` -> directory
-- `sample.ts` -> file
-- `sample/temp.ts` -> file
-- `.env` -> file
-- `Dockerfile` -> directory in auto mode
-- `dir.with.dot` -> file in auto mode
+- Ensure the parent directory exists first.
+- Use `os.OpenFile` with create-capable flags.
+- Close files promptly.
+- Return success without changing timestamps when the file already exists.
 
-Keep this logic simple. Do not add heuristics for hidden files, well-known filenames, or trailing slashes unless the external spec changes.
-
-## CLI requirements
-
-Expected flags:
-
-- `--mode auto|file|dir`
-- `--dry-run`
-- `--verbose`
-- `--no-touch`
-- `--help`
-- `--version`
-
-Expected behavior:
-
-- Exit `0` on full success.
-- Exit non-zero on the first error.
-- Write errors to stderr.
-- In dry-run mode, do not mutate the filesystem.
-- In verbose mode, print each planned or executed action in input order.
-
-## Filesystem behavior
-
-### File mode
-
-- Create parent directories with `os.MkdirAll`.
-- Create the file if it does not exist.
-- If the file exists and touch is enabled, update timestamps.
-- If touch is disabled and the file exists, leave timestamps unchanged.
-
-### Directory mode
-
-- Create the directory with `os.MkdirAll`.
-- If it already exists, treat that as success.
-
-## Permissions
+### Permissions
 
 Use explicit defaults in code:
 
@@ -155,7 +143,7 @@ Use explicit defaults in code:
 
 The effective permissions will still be influenced by the user's `umask`.
 
-## Error handling
+### Errors
 
 Wrap errors with path context.
 
@@ -164,11 +152,11 @@ Examples:
 - `detect "sample.ts": ...`
 - `create parent directory for "sample/temp.ts": ...`
 - `create file "sample.ts": ...`
-- `touch file "sample.ts": ...`
+- `create directory "sample": ...`
 
 Prefer plain, direct error messages over custom error hierarchies in the first release.
 
-## Package layout
+### Package layout
 
 Keep the initial layout shallow.
 
@@ -187,73 +175,22 @@ Keep the initial layout shallow.
 └── README.md
 ```
 
-Suggested responsibilities:
+Responsibilities:
 
-- `types.go`
-  Public enums and option/result types.
-- `detect.go`
-  Detection logic only.
-- `create.go`
-  Core filesystem behavior.
-- `pouch.go`
-  Public entry points and small orchestration helpers.
-- `cmd/pouch/main.go`
-  CLI entry point.
-- `internal/cli/flags.go`
-  CLI flag parsing and validation.
+- `types.go`: public enums and option/result types
+- `detect.go`: detection logic only
+- `create.go`: core filesystem behavior
+- `pouch.go`: public entry points and small orchestration helpers
+- `cmd/pouch/main.go`: CLI entry point
+- `internal/cli/flags.go`: CLI flag parsing and validation
 
 Do not split packages further unless the code clearly demands it.
 
-## Implementation notes
+## Testing
 
-### Path handling
-
-- Use `path/filepath` from the standard library.
-- Avoid shelling out to `mkdir`, `touch`, or other OS utilities.
-- Prefer standard library behavior over custom path normalization.
-
-### File creation
-
-Recommended approach:
-
-- Ensure the parent directory exists first.
-- Use `os.OpenFile` with create-capable flags.
-- Close files promptly.
-- If touch behavior is enabled, update timestamps explicitly.
-
-### Timestamps
-
-Treat touch behavior deliberately.
-
-- A newly created file should count as `Created`.
-- An existing file with timestamp update should count as `Touched`.
-- A dry-run result should reflect the intended action without mutating the filesystem.
-
-### Batch processing
-
-- `CreateMany` should process inputs in order.
-- Stop on the first error for v0.1.0.
-- Return successful results collected before the failure only if that shape is useful to the CLI.
-- If that makes the API awkward, keep the API simpler and handle partial reporting in the CLI layer.
-
-## Testing strategy
-
-Use table-driven tests when they make the cases easier to scan.
-Use `t.TempDir()` for filesystem isolation.
-
-Required test coverage:
-
-- Detection logic
-- Directory creation
-- File creation
-- Parent directory creation
-- Existing file touch behavior
-- `--mode file` override
-- `--mode dir` override
-- Dotfile handling
-- Ambiguous names such as `Dockerfile`
-- Dot-containing directory names such as `dir.with.dot`
-- Dry-run behavior
+- Use table-driven tests when they make the cases easier to scan.
+- Use `t.TempDir()` for filesystem isolation.
+- Cover detection logic, file creation, directory creation, parent directory creation, explicit mode overrides, ambiguous names, and dry-run behavior.
 
 Representative cases:
 
@@ -266,7 +203,7 @@ Representative cases:
 - `dir.with.dot` with auto mode creates a file
 - `dir.with.dot` with dir mode creates a directory
 
-## Release plan
+## Release scope
 
 ### v0.1.0
 
@@ -277,7 +214,6 @@ Include:
 - `--mode auto|file|dir`
 - `--dry-run`
 - `--verbose`
-- `--no-touch`
 - Public Go package
 - Unit tests
 - README
@@ -292,17 +228,15 @@ Do not include:
 
 ## Review criteria
 
-Before merging changes, check:
-
-- Does the code still reflect the simple external rule?
-- Is the public API smaller than the internal code structure?
+- Does the code reflect the documented detection rule?
+- Is the public API smaller than the internal structure?
 - Are ambiguous cases documented rather than hidden?
 - Does the CLI output stay predictable and low-noise?
-- Are tests written from observable behavior, not implementation trivia?
+- Are tests written from observable behavior rather than implementation trivia?
 
 ## Change discipline
 
 - Do not add heuristics silently.
 - Do not broaden the scope without updating the README.
-- If a new edge case requires a special rule, prefer an explicit mode override over smarter auto detection.
-- Preserve the core identity: a small, predictable, path-aware `touch`.
+- Prefer an explicit mode override over smarter auto detection.
+- Preserve the core identity: a small, predictable path creation tool.
