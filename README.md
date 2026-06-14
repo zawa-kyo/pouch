@@ -1,2 +1,127 @@
 # pouch
-A simple, path-aware touch command.
+
+`pouch` is a small CLI that creates a file or directory from a path.
+It creates missing paths, but it leaves existing files unchanged.
+
+It uses one rule in auto mode:
+
+| Final path segment     | Result               |
+| ---------------------- | -------------------- |
+| Contains a dot (`.`)   | Treat as a file      |
+| Does not contain a dot | Treat as a directory |
+
+That rule lets you create common paths without stopping to choose between `mkdir -p` and `touch`.
+
+## Examples
+
+```sh
+pouch notes
+pouch notes/today.md
+pouch src/main.go test
+```
+
+| Command                  | Result                                      |
+| ------------------------ | ------------------------------------------- |
+| `pouch notes`            | Creates the `notes` directory               |
+| `pouch notes/today.md`   | Creates parent directories, then `today.md` |
+| `pouch src/main.go test` | Processes each path in input order          |
+
+## Why it exists
+
+Creating paths often means switching between commands:
+
+```sh
+mkdir -p notes
+mkdir -p src && touch src/main.go
+```
+
+`pouch` reduces that to one command with one detection rule.
+
+## How auto mode works
+
+Auto mode looks only at the final path segment.
+
+| Path             | Auto mode result |
+| ---------------- | ---------------- |
+| `sample`         | Directory        |
+| `sample.ts`      | File             |
+| `sample/temp.ts` | File             |
+| `.env`           | File             |
+
+> [!NOTE]
+> `pouch` keeps this rule intentionally small. It does not infer intent from well-known filenames, MIME types, or trailing slashes.
+
+## When to use `--mode`
+
+Some names are ambiguous under the auto rule:
+
+| Path           | Auto mode result | Common override |
+| -------------- | ---------------- | --------------- |
+| `Dockerfile`   | Directory        | `--mode file`   |
+| `Makefile`     | Directory        | `--mode file`   |
+| `dir.with.dot` | File             | `--mode dir`    |
+
+> [!IMPORTANT]
+> `Dockerfile` and `Makefile` are treated as directories in auto mode. Use `--mode file` when you want file creation semantics.
+
+Use `--mode` when you want a different result:
+
+```sh
+pouch --mode file Dockerfile
+pouch --mode dir dir.with.dot
+```
+
+## Behavior
+
+| Target kind | Behavior                                                   |
+| ----------- | ---------------------------------------------------------- |
+| File        | Creates missing parent directories                         |
+| File        | Creates the file if it does not exist                      |
+| File        | Leaves an existing file unchanged                          |
+| File        | Returns an error if the path already exists as a directory |
+| Directory   | Creates the directory with `mkdir -p` semantics            |
+| Directory   | Succeeds if the directory already exists                   |
+| Directory   | Returns an error if the path already exists as a file      |
+
+## CLI
+
+Basic usage:
+
+```sh
+pouch [flags] PATH...
+```
+
+| Flag                           | Meaning                                               |
+| ------------------------------ | ----------------------------------------------------- |
+| `-m, --mode <auto\|file\|dir>` | Force file or directory mode                          |
+| `-n, --dry-run`                | Print planned actions without changing the filesystem |
+| `-v, --verbose`                | Print each action in input order                      |
+| `-h, --help`                   | Show help                                             |
+| `--version`                    | Show version                                          |
+
+## Exit behavior
+
+- Exit `0` on full success.
+- Exit non-zero on the first error.
+- Write errors to stderr.
+- Process input paths in order and stop at the first error.
+
+## Scope
+
+`pouch` is intentionally narrow.
+
+| Included in v0.1                          | Not included in v0.1    |
+| ----------------------------------------- | ----------------------- |
+| macOS support                             | Windows support         |
+| Linux support                             | Template generation     |
+| Path creation from CLI arguments          | File content generation |
+| Simple auto detection                     | Project scaffolding     |
+| Explicit mode overrides                   | Config files            |
+| Reusable Go package for the CLI and tests | Interactive prompts     |
+
+## Project docs
+
+- Repository overview: `README.md`
+- Japanese overview: `README-ja.md`
+- Agent guidance: `AGENTS.md`
+- Japanese agent guidance: `AGENTS-ja.md`
