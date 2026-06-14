@@ -147,10 +147,3 @@ pouch [flags] PATH...
 | Simple auto detection                     | Project scaffolding     |
 | Explicit mode overrides                   | Config files            |
 | Reusable Go package for the CLI and tests | Interactive prompts     |
-
-## Project docs
-
-- Repository overview: `README.md`
-- Japanese overview: `README-ja.md`
-- Agent guidance: `AGENTS.md`
-- Japanese agent guidance: `AGENTS-ja.md`
