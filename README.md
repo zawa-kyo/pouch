@@ -169,11 +169,11 @@ pouch [flags] PATH...
 
 `pouch` is intentionally narrow.
 
-| Included in v0.1                          | Not included in v0.1    |
-| ----------------------------------------- | ----------------------- |
-| macOS support                             | Windows support         |
-| Linux support                             | Template generation     |
-| Path creation from CLI arguments          | File content generation |
-| Simple auto detection                     | Project scaffolding     |
-| Explicit mode overrides                   | Config files            |
-| Reusable Go package for the CLI and tests | Interactive prompts     |
+| Included in v0.1                 | Not included in v0.1    |
+| -------------------------------- | ----------------------- |
+| macOS support                    | Windows support         |
+| Linux support                    | Template generation     |
+| Path creation from CLI arguments | File content generation |
+| Simple auto detection            | Project scaffolding     |
+| Explicit mode overrides          | Config files            |
+| Predictable CLI behavior         | Interactive prompts     |
