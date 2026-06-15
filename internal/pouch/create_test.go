@@ -103,7 +103,6 @@ func TestCreateAuto(t *testing.T) {
 			t.Fatalf("unexpected result: %+v", result)
 		}
 	})
-
 }
 
 func TestCreateModeOverrides(t *testing.T) {
