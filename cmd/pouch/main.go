@@ -20,13 +20,6 @@ func main() {
 }
 
 func run(args []string, stdout, stderr io.Writer) int {
-	for _, arg := range args {
-		if arg == "--version" {
-			fmt.Fprintln(stdout, version)
-			return 0
-		}
-	}
-
 	config, err := cli.Parse(args, stdout, stderr)
 	if err != nil {
 		if errors.Is(err, os.ErrInvalid) {
@@ -38,6 +31,10 @@ func run(args []string, stdout, stderr io.Writer) int {
 			return 0
 		}
 		return 1
+	}
+	if config.ShowVersion {
+		fmt.Fprintln(stdout, version)
+		return 0
 	}
 
 	results, err := pouch.CreateMany(config.Paths, config.Options)

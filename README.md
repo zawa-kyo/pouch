@@ -120,13 +120,13 @@ Basic usage:
 pouch [flags] PATH...
 ```
 
-| Flag                           | Meaning                                               |
-| ------------------------------ | ----------------------------------------------------- |
-| `-m, --mode <auto\|file\|dir>` | Force file or directory mode                          |
-| `-n, --dry-run`                | Print planned actions without changing the filesystem |
-| `-v, --verbose`                | Print each action in input order                      |
-| `-h, --help`                   | Show help                                             |
-| `--version`                    | Show version                                          |
+| Flag                             | Meaning                                               |
+| -------------------------------- | ----------------------------------------------------- |
+| `-h`, `--help`                   | Show help                                             |
+| `-m`, `--mode <auto\|file\|dir>` | Force file or directory mode                          |
+| `-n`, `--dry-run`                | Print planned actions without changing the filesystem |
+| `-v`, `--version`                | Show version                                          |
+| `-V`, `--verbose`                | Print each action in input order                      |
 
 ## Exit behavior
 

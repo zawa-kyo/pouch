@@ -86,4 +86,35 @@ func TestParse(t *testing.T) {
 			t.Fatalf("stderr = %q, want empty", stderr.String())
 		}
 	})
+
+	t.Run("parses uppercase short verbose flag", func(t *testing.T) {
+		t.Parallel()
+		var stdout bytes.Buffer
+		var stderr bytes.Buffer
+
+		config, err := Parse([]string{"-V", "sample"}, &stdout, &stderr)
+		if err != nil {
+			t.Fatalf("Parse() error = %v", err)
+		}
+		if !config.Verbose {
+			t.Fatalf("config.Verbose = %v, want true", config.Verbose)
+		}
+	})
+
+	t.Run("parses version flag without requiring path", func(t *testing.T) {
+		t.Parallel()
+		var stdout bytes.Buffer
+		var stderr bytes.Buffer
+
+		config, err := Parse([]string{"-v"}, &stdout, &stderr)
+		if err != nil {
+			t.Fatalf("Parse() error = %v", err)
+		}
+		if !config.ShowVersion {
+			t.Fatalf("config.ShowVersion = %v, want true", config.ShowVersion)
+		}
+		if len(config.Paths) != 0 {
+			t.Fatalf("config.Paths = %+v, want empty", config.Paths)
+		}
+	})
 }
