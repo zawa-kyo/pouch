@@ -4,22 +4,24 @@
 </p>
 
 <div align="center">
-  <a href="https://github.com/koki-develop/gat/releases/latest"><img src="https://img.shields.io/github/v/release/zawa-kyo/pouch" alt="release"></a>
+  <a href="https://github.com/zawa-kyo/pouch/releases/latest"><img src="https://img.shields.io/github/v/release/zawa-kyo/pouch" alt="release"></a>
   <a href="https://github.com/zawa-kyo/pouch?tab=MIT-1-ov-file"><img src="https://img.shields.io/github/license/zawa-kyo/pouch" alt="license"></a>
   <a href="https://github.com/zawa-kyo/pouch/actions/workflows/ci.yml"><img src="https://github.com/zawa-kyo/pouch/actions/workflows/ci.yml/badge.svg?branch=main" alt="ci"></a>
   <a href="https://goreportcard.com/report/github.com/zawa-kyo/pouch"><img src="https://goreportcard.com/badge/github.com/zawa-kyo/pouch" alt="report"></a>
   <a href="https://github.com/zawa-kyo/pouch/tree/main"><img src="https://img.shields.io/github/repo-size/zawa-kyo/pouch" alt="size"></a>
 </div>
-
-<p align="center">
-  <img src="./assets/demo.gif" alt="logo">
-</p>
 <!-- markdownlint-enable MD033 -->
 
 # 👜 pouch
 
 `pouch` is a small CLI that creates a file or directory from a path.
 It creates missing paths, but it leaves existing files unchanged.
+
+<!-- markdownlint-disable MD033 -->
+<p align="center">
+  <img src="./assets/demo.gif" alt="demo">
+</p>
+<!-- markdownlint-enable MD033 -->
 
 It uses one small rule set in auto mode:
 
@@ -173,7 +175,7 @@ pouch [flags] PATH...
 
 `pouch` is intentionally narrow.
 
-| Included in v0.1                 | Not included in v0.1    |
+| Included in v0.2                 | Not included in v0.2    |
 | -------------------------------- | ----------------------- |
 | macOS support                    | Windows support         |
 | Linux support                    | Template generation     |
