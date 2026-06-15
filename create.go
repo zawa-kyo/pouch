@@ -8,7 +8,10 @@ import (
 )
 
 func create(path string, opts Options) (Result, error) {
-	kind := detectWithMode(path, opts.Mode)
+	kind, err := detectWithMode(path, opts.Mode)
+	if err != nil {
+		return Result{}, err
+	}
 	result := Result{Path: path, Kind: kind}
 
 	info, err := os.Lstat(path)
@@ -29,14 +32,18 @@ func create(path string, opts Options) (Result, error) {
 	}
 }
 
-func detectWithMode(path string, mode Mode) Kind {
+func detectWithMode(path string, mode Mode) (Kind, error) {
+	if mode == ModeFile && hasTrailingPathSeparator(path) {
+		return KindFile, fmt.Errorf("detect %q: trailing slash is only valid for directories", path)
+	}
+
 	switch mode {
 	case ModeFile:
-		return KindFile
+		return KindFile, nil
 	case ModeDir:
-		return KindDir
+		return KindDir, nil
 	default:
-		return Detect(path)
+		return Detect(path), nil
 	}
 }
 

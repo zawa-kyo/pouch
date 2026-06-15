@@ -24,10 +24,12 @@ Use this file while building the first Go implementation of `pouch` from the con
 
 ### Detection
 
-- In auto mode, inspect only the final path segment.
+- In auto mode, first check whether the path ends with `/`.
+- If the path ends with `/`, treat it as a directory.
+- Otherwise, inspect only the final path segment.
 - If the final segment contains a dot, treat the path as a file.
 - Otherwise, treat the path as a directory.
-- Do not add heuristics for hidden files, well-known filenames, or trailing slashes unless the external spec changes.
+- Do not add heuristics for hidden files or well-known filenames unless the external spec changes.
 
 Examples:
 
@@ -35,6 +37,7 @@ Examples:
 - `sample.ts` -> file
 - `sample/temp.ts` -> file
 - `.env` -> file
+- `dir.with.dot/` -> directory in auto mode
 - `Dockerfile` -> directory in auto mode
 - `dir.with.dot` -> file in auto mode
 
@@ -44,6 +47,7 @@ Examples:
 - If the file does not exist, create it.
 - If the file already exists, leave it unchanged.
 - If the target path already exists as a directory, return an error.
+- If the path ends with `/` and mode is `file`, return an error.
 - If a path is treated as a directory, use `mkdir -p` semantics.
 - If the directory already exists, treat that as success.
 - If the target path already exists as a file, return an error.
@@ -210,6 +214,7 @@ Do not split packages further unless the code clearly demands it.
 - Use `t.TempDir()` for filesystem isolation.
 - Cover detection logic, file creation, directory creation, parent directory creation, explicit mode overrides, ambiguous names, and dry-run behavior.
 - Cover type-conflict cases such as `--mode file` against an existing directory and `--mode dir` against an existing file.
+- Cover trailing-slash cases in auto mode and `--mode file`.
 
 Representative cases:
 
@@ -217,6 +222,7 @@ Representative cases:
 - `sample.ts` creates a file
 - `sample/temp.ts` creates parent directories and file
 - `.env` creates a file
+- `dir.with.dot/` with auto mode creates a directory
 - `Dockerfile` with auto mode creates a directory
 - `Dockerfile` with file mode creates a file
 - `dir.with.dot` with auto mode creates a file

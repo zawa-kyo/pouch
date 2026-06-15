@@ -6,7 +6,7 @@ import "os"
 type Mode int
 
 const (
-	// ModeAuto detects the target kind from the final path segment.
+	// ModeAuto detects the target kind from the path, preferring a trailing slash over the final segment rule.
 	ModeAuto Mode = iota
 	// ModeFile forces file creation semantics.
 	ModeFile

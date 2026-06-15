@@ -55,6 +55,21 @@ func TestCreate(t *testing.T) {
 		assertFileExists(t, path)
 	})
 
+	t.Run("trailing slash creates directory in auto mode", func(t *testing.T) {
+		t.Parallel()
+		root := t.TempDir()
+		path := filepath.Join(root, "dir.with.dot") + string(filepath.Separator)
+
+		result, err := Create(path, Options{})
+		if err != nil {
+			t.Fatalf("Create() error = %v", err)
+		}
+		if result.Kind != KindDir || result.Action != ActionCreateDir {
+			t.Fatalf("unexpected result: %+v", result)
+		}
+		assertDirExists(t, filepath.Clean(path))
+	})
+
 	t.Run("skips existing file", func(t *testing.T) {
 		t.Parallel()
 		root := t.TempDir()
@@ -176,6 +191,17 @@ func TestCreate(t *testing.T) {
 		}
 
 		_, err := Create(path, Options{Mode: ModeDir})
+		if err == nil {
+			t.Fatal("expected error")
+		}
+	})
+
+	t.Run("file mode rejects trailing slash", func(t *testing.T) {
+		t.Parallel()
+		root := t.TempDir()
+		path := filepath.Join(root, "target") + string(filepath.Separator)
+
+		_, err := Create(path, Options{Mode: ModeFile})
 		if err == nil {
 			t.Fatal("expected error")
 		}

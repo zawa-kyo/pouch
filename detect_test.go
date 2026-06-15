@@ -13,6 +13,8 @@ func TestDetect(t *testing.T) {
 		{path: "sample.ts", want: KindFile},
 		{path: "sample/temp.ts", want: KindFile},
 		{path: ".env", want: KindFile},
+		{path: "sample/", want: KindDir},
+		{path: "dir.with.dot/", want: KindDir},
 		{path: "Dockerfile", want: KindDir},
 		{path: "dir.with.dot", want: KindFile},
 	}
