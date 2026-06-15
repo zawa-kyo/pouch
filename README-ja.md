@@ -57,7 +57,7 @@ go install github.com/zawa-kyo/pouch/cmd/pouch@latest
 
 ### mise
 
-まずは GitHub backend を直接使えます。
+GitHub backend を直接利用できます。
 
 ```sh
 mise use -g github:zawa-kyo/pouch@latest
