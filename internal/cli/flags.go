@@ -12,9 +12,10 @@ import (
 
 // Config is the parsed CLI input for one invocation.
 type Config struct {
-	Paths   []string
-	Options pouch.Options
-	Verbose bool
+	Paths       []string
+	Options     pouch.Options
+	Verbose     bool
+	ShowVersion bool
 }
 
 // Parse converts CLI arguments into a validated Config.
@@ -29,10 +30,13 @@ func Parse(args []string, stdout, stderr io.Writer) (Config, error) {
 	fs.BoolVar(dryRun, "n", false, "")
 
 	verbose := fs.Bool("verbose", false, "")
-	fs.BoolVar(verbose, "v", false, "")
+	fs.BoolVar(verbose, "V", false, "")
 
 	help := fs.Bool("help", false, "")
 	fs.BoolVar(help, "h", false, "")
+
+	showVersion := fs.Bool("version", false, "")
+	fs.BoolVar(showVersion, "v", false, "")
 
 	fs.Usage = func() { writeUsage(stderr) }
 
@@ -43,6 +47,10 @@ func Parse(args []string, stdout, stderr io.Writer) (Config, error) {
 	if *help {
 		writeUsage(stdout)
 		return Config{}, flag.ErrHelp
+	}
+
+	if *showVersion {
+		return Config{ShowVersion: true}, nil
 	}
 
 	paths := fs.Args()
@@ -69,16 +77,16 @@ func writeUsage(w io.Writer) {
 	fmt.Fprintln(w, "Usage: pouch [flags] PATH...")
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, "Flags:")
+	fmt.Fprintln(w, "  -h, --help")
+	fmt.Fprintln(w, "      Show help.")
 	fmt.Fprintln(w, "  -m, --mode auto|file|dir")
 	fmt.Fprintln(w, "      Force file or directory mode.")
 	fmt.Fprintln(w, "  -n, --dry-run")
 	fmt.Fprintln(w, "      Print planned actions without changing the filesystem.")
-	fmt.Fprintln(w, "  -v, --verbose")
-	fmt.Fprintln(w, "      Print each action in input order.")
-	fmt.Fprintln(w, "  -h, --help")
-	fmt.Fprintln(w, "      Show help.")
-	fmt.Fprintln(w, "      --version")
+	fmt.Fprintln(w, "  -v, --version")
 	fmt.Fprintln(w, "      Show version.")
+	fmt.Fprintln(w, "  -V, --verbose")
+	fmt.Fprintln(w, "      Print each action in input order.")
 }
 
 func parseMode(value string) (pouch.Mode, error) {
