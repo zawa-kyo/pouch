@@ -175,7 +175,7 @@ pouch [flags] PATH...
 
 `pouch` is intentionally narrow.
 
-| Included in v0.1                 | Not included in v0.1    |
+| Included in v0.2                 | Not included in v0.2    |
 | -------------------------------- | ----------------------- |
 | macOS support                    | Windows support         |
 | Linux support                    | Template generation     |
