@@ -24,17 +24,20 @@
 
 ### 判定
 
-- auto モードでは最後のパスセグメントだけを見る。
+- auto モードでは、まず末尾が `/` で終わるかを確認する。
+- `/` で終わっていれば、ディレクトリとして扱う。
+- そうでなければ、最後のパスセグメントだけを見る。
 - 最後のセグメントにドットが含まれていれば、ファイルとして扱う。
 - そうでなければ、ディレクトリとして扱う。
-- 外部仕様が変わらない限り、隠しファイル、既知のファイル名、末尾スラッシュ向けのヒューリスティックは足さない。
+- 外部仕様が変わらない限り、隠しファイルや既知のファイル名向けのヒューリスティックは足さない。
 
-例:
+例は次のとおり。
 
 - `sample` -> ディレクトリ。
 - `sample.ts` -> ファイル。
 - `sample/temp.ts` -> ファイル。
 - `.env` -> ファイル。
+- `dir.with.dot/` -> auto モードではディレクトリ。
 - `Dockerfile` -> auto モードではディレクトリ。
 - `dir.with.dot` -> auto モードではファイル。
 
@@ -44,6 +47,7 @@
 - ファイルが存在しなければ作成する。
 - 既存ファイルがある場合は、何も変更しない。
 - 対象パスがディレクトリとして存在する場合は、エラーにする。
+- パスが `/` で終わっていて mode が `file` の場合は、エラーにする。
 - ディレクトリとして扱う場合は、`mkdir -p` 相当で作成する。
 - ディレクトリがすでに存在する場合は、成功として扱う。
 - 対象パスがファイルとして存在する場合は、エラーにする。
@@ -59,7 +63,7 @@
 
 ## CLI 契約
 
-想定フラグ:
+想定フラグは次のとおり。
 
 - `--mode auto|file|dir`
 - `--dry-run`
@@ -67,7 +71,7 @@
 - `--help`
 - `--version`
 
-想定挙動:
+想定挙動は次のとおり。
 
 - 完全成功なら終了コード `0`。
 - 最初のエラーで非ゼロ終了。
@@ -127,7 +131,7 @@ func Create(path string, opts Options) (Result, error)
 func CreateMany(paths []string, opts Options) ([]Result, error)
 ```
 
-補足:
+補足は次のとおり。
 
 - `Detect` は決定的で、副作用を持たないようにする。
 - 振る舞いの中心は `Create` に置く。
@@ -165,7 +169,7 @@ func CreateMany(paths []string, opts Options) ([]Result, error)
 
 エラーにはパス文脈を付けて包む。
 
-例:
+例は次のとおり。
 
 - `detect "sample.ts": ...`
 - `create parent directory for "sample/temp.ts": ...`
@@ -193,7 +197,7 @@ func CreateMany(paths []string, opts Options) ([]Result, error)
 └── README.md
 ```
 
-役割:
+役割は次のとおり。
 
 - `types.go`: 公開 enum と option/result 型。
 - `detect.go`: 判定ロジックだけを置く。
@@ -210,13 +214,15 @@ func CreateMany(paths []string, opts Options) ([]Result, error)
 - ファイルシステムの隔離には `t.TempDir()` を使う。
 - 判定ロジック、ファイル作成、ディレクトリ作成、親ディレクトリ作成、明示モード上書き、曖昧な名前、dry-run 挙動をカバーする。
 - `--mode file` と既存ディレクトリの衝突、`--mode dir` と既存ファイルの衝突もカバーする。
+- auto モードの末尾スラッシュと `--mode file` の衝突もカバーする。
 
-代表ケース:
+代表ケースは次のとおり。
 
 - `sample` はディレクトリを作る。
 - `sample.ts` はファイルを作る。
 - `sample/temp.ts` は親ディレクトリとファイルを作る。
 - `.env` はファイルを作る。
+- auto モードの `dir.with.dot/` はディレクトリを作る。
 - auto モードの `Dockerfile` はディレクトリを作る。
 - file モードの `Dockerfile` はファイルを作る。
 - auto モードの `dir.with.dot` はファイルを作る。
@@ -226,7 +232,7 @@ func CreateMany(paths []string, opts Options) ([]Result, error)
 
 ### v0.1.0
 
-含めるもの:
+含めるものは次のとおり。
 
 - `PATH...` を受け取る CLI。
 - 自動判定。
@@ -237,7 +243,7 @@ func CreateMany(paths []string, opts Options) ([]Result, error)
 - ユニットテスト。
 - README。
 
-含めないもの:
+含めないものは次のとおり。
 
 - シェル補完。
 - 設定ファイル。

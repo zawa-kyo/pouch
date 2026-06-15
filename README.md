@@ -3,12 +3,13 @@
 `pouch` is a small CLI that creates a file or directory from a path.
 It creates missing paths, but it leaves existing files unchanged.
 
-It uses one rule in auto mode:
+It uses one small rule set in auto mode:
 
-| Final path segment     | Result               |
-| ---------------------- | -------------------- |
-| Contains a dot (`.`)   | Treat as a file      |
-| Does not contain a dot | Treat as a directory |
+| Path shape                 | Result               |
+| -------------------------- | -------------------- |
+| Ends with `/`              | Treat as a directory |
+| Final segment contains `.` | Treat as a file      |
+| Otherwise                  | Treat as a directory |
 
 That rule lets you create common paths without stopping to choose between `mkdir -p` and `touch`.
 
@@ -64,11 +65,24 @@ mkdir -p notes
 mkdir -p src && touch src/main.go
 ```
 
-`pouch` reduces that to one command with one detection rule.
+The name `pouch` comes from that muscle memory: `mkdir -p` for directories, `touch` for files.
+This tool folds those two habits into one small command that accepts a path and does the obvious thing with one detection rule set.
+
+It is meant for the moment when you know the path you want, but you do not want to stop and spell out whether this one needs `mkdir -p`, `touch`, or both.
+
+## Related tools
+
+`pouch` sits on top of a familiar idea rather than replacing an existing standard tool.
+
+- `mkdir -p` creates parent directories as needed.
+- `touch` creates an empty file when the target does not exist.
+- In Go, the closest building blocks are `os.MkdirAll` and `os.OpenFile`.
+
+If you already like the explicit Unix primitives, keep using them. `pouch` is for the narrower case where you want the path itself to drive the operation.
 
 ## How auto mode works
 
-Auto mode looks only at the final path segment.
+Auto mode first checks whether the path ends with `/`. If it does not, it looks at the final path segment.
 
 | Path             | Auto mode result |
 | ---------------- | ---------------- |
@@ -76,9 +90,10 @@ Auto mode looks only at the final path segment.
 | `sample.ts`      | File             |
 | `sample/temp.ts` | File             |
 | `.env`           | File             |
+| `dir.with.dot/`  | Directory        |
 
 > [!NOTE]
-> `pouch` keeps this rule intentionally small. It does not infer intent from well-known filenames, MIME types, or trailing slashes.
+> `pouch` keeps this rule intentionally small. It does not infer intent from well-known filenames or MIME types. A trailing slash is the only explicit directory hint in auto mode.
 
 ## When to use `--mode`
 
@@ -99,6 +114,8 @@ Use `--mode` when you want a different result:
 pouch --mode file Dockerfile
 pouch --mode dir dir.with.dot
 ```
+
+If a path ends with `/`, `--mode file` returns an error instead of creating a file.
 
 ## Behavior
 
