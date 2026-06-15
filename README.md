@@ -1,3 +1,13 @@
+<!-- markdownlint-disable MD033 -->
+<div align="center">
+  <a href="https://github.com/koki-develop/gat/releases/latest"><img src="https://img.shields.io/github/v/release/zawa-kyo/pouch" alt="release"></a>
+  <a href="https://github.com/zawa-kyo/pouch?tab=MIT-1-ov-file"><img src="https://img.shields.io/github/license/zawa-kyo/pouch" alt="license"></a>
+  <a href="https://github.com/zawa-kyo/pouch/actions/workflows/ci.yml"><img src="https://github.com/zawa-kyo/pouch/actions/workflows/ci.yml/badge.svg?branch=main" alt="ci"></a>
+  <a href="https://github.com/zawa-kyo/pouch/tree/main"><img src="https://goreportcard.com/badge/github.com/zawa-kyo/pouch" alt="report"></a>
+  <a href="https://github.com/zawa-kyo/pouch/tree/main"><img src="https://img.shields.io/github/repo-size/zawa-kyo/pouch" alt="size"></a>
+</div>
+<!-- markdownlint-enable MD033 -->
+
 # 👜 pouch
 
 `pouch` is a small CLI that creates a file or directory from a path.
