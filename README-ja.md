@@ -1,7 +1,6 @@
 <!-- markdownlint-disable MD033 -->
 <p align="center">
   <img src="./assets/logo.jpeg" alt="logo">
-  A simple, path-aware touch command.
 </p>
 
 <div align="center">

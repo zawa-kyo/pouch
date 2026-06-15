@@ -1,7 +1,6 @@
 <!-- markdownlint-disable MD033 -->
 <p align="center">
   <img src="./assets/logo.jpeg" alt="logo">
-  A simple, path-aware touch command.
 </p>
 
 <div align="center">
@@ -91,7 +90,6 @@ It is meant for the moment when you know the path you want, but you do not want 
 
 - `mkdir -p` creates parent directories as needed.
 - `touch` creates an empty file when the target does not exist.
-- In Go, the closest building blocks are `os.MkdirAll` and `os.OpenFile`.
 
 If you already like the explicit Unix primitives, keep using them. `pouch` is for the narrower case where you want the path itself to drive the operation.
 
