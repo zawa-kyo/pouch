@@ -19,7 +19,7 @@ It creates missing paths, but it leaves existing files unchanged.
 
 <!-- markdownlint-disable MD033 -->
 <p align="center">
-  <img src="./assets/demo.gif" alt="logo">
+  <img src="./assets/demo.gif" alt="demo">
 </p>
 <!-- markdownlint-enable MD033 -->
 
