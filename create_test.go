@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func TestCreate(t *testing.T) {
+func TestCreateAuto(t *testing.T) {
 	t.Parallel()
 
 	t.Run("creates directory in auto mode", func(t *testing.T) {
@@ -104,6 +104,11 @@ func TestCreate(t *testing.T) {
 		}
 	})
 
+}
+
+func TestCreateModeOverrides(t *testing.T) {
+	t.Parallel()
+
 	t.Run("mode file overrides Dockerfile", func(t *testing.T) {
 		t.Parallel()
 		root := t.TempDir()
@@ -133,6 +138,10 @@ func TestCreate(t *testing.T) {
 		}
 		assertDirExists(t, path)
 	})
+}
+
+func TestCreateDryRun(t *testing.T) {
+	t.Parallel()
 
 	t.Run("dry run reports intended file creation", func(t *testing.T) {
 		t.Parallel()
@@ -167,6 +176,10 @@ func TestCreate(t *testing.T) {
 			t.Fatalf("expected directory not to exist, got err=%v", err)
 		}
 	})
+}
+
+func TestCreateErrors(t *testing.T) {
+	t.Parallel()
 
 	t.Run("file mode errors for existing directory", func(t *testing.T) {
 		t.Parallel()
