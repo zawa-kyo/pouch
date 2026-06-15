@@ -1,4 +1,9 @@
 <!-- markdownlint-disable MD033 -->
+<p align="center">
+  <img src="./assets/logo.jpeg" alt="logo">
+  A simple, path-aware touch command.
+</p>
+
 <div align="center">
   <a href="https://github.com/koki-develop/gat/releases/latest"><img src="https://img.shields.io/github/v/release/zawa-kyo/pouch" alt="release"></a>
   <a href="https://github.com/zawa-kyo/pouch?tab=MIT-1-ov-file"><img src="https://img.shields.io/github/license/zawa-kyo/pouch" alt="license"></a>
