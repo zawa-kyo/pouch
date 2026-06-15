@@ -164,6 +164,8 @@ Do not split packages further unless the code clearly demands it.
 
 ## Testing
 
+- Use `go test ./...` from the repository root as the default test command.
+- Do not assume the repository root itself contains a buildable Go package.
 - Use table-driven tests when they make the cases easier to scan.
 - Use `t.TempDir()` for filesystem isolation.
 - Cover detection logic, file creation, directory creation, parent directory creation, explicit mode overrides, ambiguous names, and dry-run behavior.
