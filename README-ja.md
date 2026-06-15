@@ -10,16 +10,18 @@
   <a href="https://goreportcard.com/report/github.com/zawa-kyo/pouch"><img src="https://goreportcard.com/badge/github.com/zawa-kyo/pouch" alt="report"></a>
   <a href="https://github.com/zawa-kyo/pouch/tree/main"><img src="https://img.shields.io/github/repo-size/zawa-kyo/pouch" alt="size"></a>
 </div>
-
-<p align="center">
-  <img src="./assets/demo.gif" alt="logo">
-</p>
 <!-- markdownlint-enable MD033 -->
 
 # 👜 pouch
 
 `pouch` は、パスからファイルまたはディレクトリを作成する小さな CLI です。
 足りないパスは作成しますが、既存ファイルは変更しません。
+
+<!-- markdownlint-disable MD033 -->
+<p align="center">
+  <img src="./assets/demo.gif" alt="logo">
+</p>
+<!-- markdownlint-enable MD033 -->
 
 auto モードでは、次の小さなルールセットで判定します。
 
