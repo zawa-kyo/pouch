@@ -10,6 +10,10 @@
   <a href="https://goreportcard.com/report/github.com/zawa-kyo/pouch"><img src="https://goreportcard.com/badge/github.com/zawa-kyo/pouch" alt="report"></a>
   <a href="https://github.com/zawa-kyo/pouch/tree/main"><img src="https://img.shields.io/github/repo-size/zawa-kyo/pouch" alt="size"></a>
 </div>
+
+<p align="center">
+  <img src="./assets/demo.gif" alt="logo">
+</p>
 <!-- markdownlint-enable MD033 -->
 
 # 👜 pouch
