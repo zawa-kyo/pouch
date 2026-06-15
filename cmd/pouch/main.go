@@ -6,8 +6,8 @@ import (
 	"io"
 	"os"
 
-	"github.com/zawa-kyo/pouch"
 	"github.com/zawa-kyo/pouch/internal/cli"
+	"github.com/zawa-kyo/pouch/internal/pouch"
 )
 
 var version = "dev"

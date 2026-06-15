@@ -5,7 +5,7 @@ import (
 	"flag"
 	"testing"
 
-	"github.com/zawa-kyo/pouch"
+	"github.com/zawa-kyo/pouch/internal/pouch"
 )
 
 func TestParseSuccess(t *testing.T) {

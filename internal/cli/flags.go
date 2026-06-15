@@ -7,7 +7,7 @@ import (
 	"io"
 	"strings"
 
-	"github.com/zawa-kyo/pouch"
+	"github.com/zawa-kyo/pouch/internal/pouch"
 )
 
 // Config is the parsed CLI input for one invocation.
