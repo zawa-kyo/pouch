@@ -14,7 +14,8 @@
 ## スコープ
 
 - `pouch` の中心は CLI。
-- Go パッケージは CLI とテストを支えるために置く。
+- リポジトリ内の Go コードは CLI とテストを支えるために置く。
+- ルートの Go パッケージを、外部向けに保証するライブラリ API とはみなさない。
 - プロジェクトの焦点はパス作成に絞る。
 - 汎用スキャフォールディングツールには広げない。
 - v0.1.0 の対応 OS は macOS と Linux に限定する。
@@ -80,66 +81,18 @@
 - verbose では入力順に各操作の予定または実行内容を表示する。
 - 複数パスも入力順に処理し、最初のエラーで停止する。
 
-## パッケージ API
+## 中心となる処理
 
-公開 API は小さく保つ。
-
-```go
-package pouch
-
-import "os"
-
-type Mode int
-
-const (
-    ModeAuto Mode = iota
-    ModeFile
-    ModeDir
-)
-
-type Kind int
-
-const (
-    KindFile Kind = iota
-    KindDir
-)
-
-type Action int
-
-const (
-    ActionNone Action = iota
-    ActionCreateFile
-    ActionCreateDir
-    ActionSkipExisting
-)
-
-type Options struct {
-    Mode     Mode
-    DirPerm  os.FileMode
-    FilePerm os.FileMode
-    DryRun   bool
-}
-
-type Result struct {
-    Path   string
-    Kind   Kind
-    Action Action
-}
-
-func Detect(path string) Kind
-func Create(path string, opts Options) (Result, error)
-func CreateMany(paths []string, opts Options) ([]Result, error)
-```
+中心となる処理は、パス判定と作成処理に絞って小さく保つ。
 
 補足は次のとおり。
 
-- `Detect` は決定的で、副作用を持たないようにする。
-- 振る舞いの中心は `Create` に置く。
-- `CreateMany` は入力順を保つ。
-- `CreateMany` は最初のエラーで停止する。
-- `CreateMany` が失敗した場合は、失敗前までの成功結果を返したうえでエラーも返す。
-- `Result.Action` は、実行した操作または実行予定の操作を表す。
-- dry-run でも、`Result.Action` には実行した場合の内容を入れる。
+- 判定処理は決定的で、副作用を持たないようにする。
+- 単一パスの作成を、振る舞いの基本単位にする。
+- 複数パスの処理は入力順を保つ。
+- 複数パスの処理は最初のエラーで停止する。
+- 複数パス処理が失敗した場合は、失敗前までの成功結果を返したうえでエラーも返す。
+- dry-run でも、実行した場合の操作内容がわかるようにする。
 
 ## 実装メモ
 
@@ -188,21 +141,22 @@ func CreateMany(paths []string, opts Options) ([]Result, error)
 │   └── pouch/
 │       └── main.go
 ├── internal/
+│   ├── pouch/
+│   │   ├── create.go
+│   │   ├── detect.go
+│   │   ├── pouch.go
+│   │   └── types.go
 │   └── cli/
 │       └── flags.go
-├── pouch.go
-├── create.go
-├── detect.go
-├── types.go
 └── README.md
 ```
 
 役割は次のとおり。
 
-- `types.go`: 公開 enum と option/result 型。
-- `detect.go`: 判定ロジックだけを置く。
-- `create.go`: ファイルシステム操作の本体を置く。
-- `pouch.go`: 公開エントリポイントと小さな調停処理を置く。
+- `internal/pouch/types.go`: 共通の enum と option/result 型。
+- `internal/pouch/detect.go`: 判定ロジックだけを置く。
+- `internal/pouch/create.go`: ファイルシステム操作の本体を置く。
+- `internal/pouch/pouch.go`: パス処理を束ねる小さな調停処理を置く。
 - `cmd/pouch/main.go`: CLI のエントリポイント。
 - `internal/cli/flags.go`: CLI フラグの解析と検証。
 
@@ -210,6 +164,8 @@ func CreateMany(paths []string, opts Options) ([]Result, error)
 
 ## テスト
 
+- リポジトリルートから実行する標準のテストコマンドは `go test ./...` とする。
+- リポジトリルート自体に、build 対象の Go パッケージがあるとは限らないものとして扱う。
 - 見通しがよくなる箇所ではテーブル駆動テストを使う。
 - ファイルシステムの隔離には `t.TempDir()` を使う。
 - 判定ロジック、ファイル作成、ディレクトリ作成、親ディレクトリ作成、明示モード上書き、曖昧な名前、dry-run 挙動をカバーする。
@@ -239,7 +195,6 @@ func CreateMany(paths []string, opts Options) ([]Result, error)
 - `--mode auto|file|dir`。
 - `--dry-run`。
 - `--verbose`。
-- 公開 Go パッケージ。
 - ユニットテスト。
 - README。
 
@@ -254,7 +209,7 @@ func CreateMany(paths []string, opts Options) ([]Result, error)
 ## レビュー観点
 
 - コードは文書化された判定ルールを反映しているか。
-- 公開 API は内部構造より小さいままか。
+- CLI 中心の構成は、その背後の実装より小さく単純なままか。
 - 曖昧なケースは隠されず文書化されているか。
 - CLI の出力は予測しやすく、過剰に騒がしくないか。
 - テストは実装の細部ではなく、観測可能な挙動を見ているか。

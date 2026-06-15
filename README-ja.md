@@ -1,14 +1,13 @@
 <!-- markdownlint-disable MD033 -->
 <p align="center">
   <img src="./assets/logo.jpeg" alt="logo">
-  A simple, path-aware touch command.
 </p>
 
 <div align="center">
   <a href="https://github.com/koki-develop/gat/releases/latest"><img src="https://img.shields.io/github/v/release/zawa-kyo/pouch" alt="release"></a>
   <a href="https://github.com/zawa-kyo/pouch?tab=MIT-1-ov-file"><img src="https://img.shields.io/github/license/zawa-kyo/pouch" alt="license"></a>
   <a href="https://github.com/zawa-kyo/pouch/actions/workflows/ci.yml"><img src="https://github.com/zawa-kyo/pouch/actions/workflows/ci.yml/badge.svg?branch=main" alt="ci"></a>
-  <a href="https://github.com/zawa-kyo/pouch/tree/main"><img src="https://goreportcard.com/badge/github.com/zawa-kyo/pouch" alt="report"></a>
+  <a href="https://goreportcard.com/report/github.com/zawa-kyo/pouch"><img src="https://goreportcard.com/badge/github.com/zawa-kyo/pouch" alt="report"></a>
   <a href="https://github.com/zawa-kyo/pouch/tree/main"><img src="https://img.shields.io/github/repo-size/zawa-kyo/pouch" alt="size"></a>
 </div>
 <!-- markdownlint-enable MD033 -->
@@ -169,11 +168,11 @@ pouch [flags] PATH...
 
 `pouch` は意図的に対象を絞っています。
 
-| v0.1 に含めるもの                  | v0.1 に含めないもの                |
-| ---------------------------------- | ---------------------------------- |
-| macOS 対応                         | Windows 対応                       |
-| Linux 対応                         | テンプレート生成                   |
-| CLI 引数からのパス作成             | ファイル内容の生成                 |
-| 単純な自動判定                     | プロジェクトスキャフォールディング |
-| 明示モードによる上書き             | 設定ファイル                       |
-| CLI とテストを支える Go パッケージ | 対話プロンプト                     |
+| v0.1 に含めるもの      | v0.1 に含めないもの                |
+| ---------------------- | ---------------------------------- |
+| macOS 対応             | Windows 対応                       |
+| Linux 対応             | テンプレート生成                   |
+| CLI 引数からのパス作成 | ファイル内容の生成                 |
+| 単純な自動判定         | プロジェクトスキャフォールディング |
+| 明示モードによる上書き | 設定ファイル                       |
+| 予測しやすい CLI 挙動  | 対話プロンプト                     |

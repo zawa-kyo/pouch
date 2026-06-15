@@ -1,14 +1,13 @@
 <!-- markdownlint-disable MD033 -->
 <p align="center">
   <img src="./assets/logo.jpeg" alt="logo">
-  A simple, path-aware touch command.
 </p>
 
 <div align="center">
   <a href="https://github.com/koki-develop/gat/releases/latest"><img src="https://img.shields.io/github/v/release/zawa-kyo/pouch" alt="release"></a>
   <a href="https://github.com/zawa-kyo/pouch?tab=MIT-1-ov-file"><img src="https://img.shields.io/github/license/zawa-kyo/pouch" alt="license"></a>
   <a href="https://github.com/zawa-kyo/pouch/actions/workflows/ci.yml"><img src="https://github.com/zawa-kyo/pouch/actions/workflows/ci.yml/badge.svg?branch=main" alt="ci"></a>
-  <a href="https://github.com/zawa-kyo/pouch/tree/main"><img src="https://goreportcard.com/badge/github.com/zawa-kyo/pouch" alt="report"></a>
+  <a href="https://goreportcard.com/report/github.com/zawa-kyo/pouch"><img src="https://goreportcard.com/badge/github.com/zawa-kyo/pouch" alt="report"></a>
   <a href="https://github.com/zawa-kyo/pouch/tree/main"><img src="https://img.shields.io/github/repo-size/zawa-kyo/pouch" alt="size"></a>
 </div>
 <!-- markdownlint-enable MD033 -->
@@ -91,7 +90,6 @@ It is meant for the moment when you know the path you want, but you do not want 
 
 - `mkdir -p` creates parent directories as needed.
 - `touch` creates an empty file when the target does not exist.
-- In Go, the closest building blocks are `os.MkdirAll` and `os.OpenFile`.
 
 If you already like the explicit Unix primitives, keep using them. `pouch` is for the narrower case where you want the path itself to drive the operation.
 
@@ -171,11 +169,11 @@ pouch [flags] PATH...
 
 `pouch` is intentionally narrow.
 
-| Included in v0.1                          | Not included in v0.1    |
-| ----------------------------------------- | ----------------------- |
-| macOS support                             | Windows support         |
-| Linux support                             | Template generation     |
-| Path creation from CLI arguments          | File content generation |
-| Simple auto detection                     | Project scaffolding     |
-| Explicit mode overrides                   | Config files            |
-| Reusable Go package for the CLI and tests | Interactive prompts     |
+| Included in v0.1                 | Not included in v0.1    |
+| -------------------------------- | ----------------------- |
+| macOS support                    | Windows support         |
+| Linux support                    | Template generation     |
+| Path creation from CLI arguments | File content generation |
+| Simple auto detection            | Project scaffolding     |
+| Explicit mode overrides          | Config files            |
+| Predictable CLI behavior         | Interactive prompts     |

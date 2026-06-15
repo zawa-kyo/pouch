@@ -5,10 +5,10 @@ import (
 	"flag"
 	"testing"
 
-	"github.com/zawa-kyo/pouch"
+	"github.com/zawa-kyo/pouch/internal/pouch"
 )
 
-func TestParse(t *testing.T) {
+func TestParseSuccess(t *testing.T) {
 	t.Parallel()
 
 	t.Run("parses flags and paths", func(t *testing.T) {
@@ -30,6 +30,11 @@ func TestParse(t *testing.T) {
 			t.Fatalf("unexpected output: stdout=%q stderr=%q", stdout.String(), stderr.String())
 		}
 	})
+
+}
+
+func TestParseErrors(t *testing.T) {
+	t.Parallel()
 
 	t.Run("requires path", func(t *testing.T) {
 		t.Parallel()
@@ -69,6 +74,10 @@ func TestParse(t *testing.T) {
 			t.Fatal("stderr is empty, want parse error output")
 		}
 	})
+}
+
+func TestParseSpecialFlags(t *testing.T) {
+	t.Parallel()
 
 	t.Run("writes help to stdout", func(t *testing.T) {
 		t.Parallel()

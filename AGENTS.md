@@ -14,7 +14,8 @@ Use this file while building the first Go implementation of `pouch` from the con
 ## Scope
 
 - `pouch` is primarily a CLI.
-- The Go package exists to support the CLI and tests.
+- The Go code in the repository exists to support the CLI and tests.
+- Do not treat the repository root package as a supported external library API.
 - Keep the project focused on path creation.
 - Do not expand it into a general scaffolding tool.
 - Target macOS and Linux only for v0.1.0.
@@ -80,66 +81,18 @@ Expected behavior:
 - In verbose mode, print each planned or executed action in input order.
 - Process input paths in order and stop at the first error.
 
-## Package API
+## Core behavior units
 
-Keep the public surface small.
-
-```go
-package pouch
-
-import "os"
-
-type Mode int
-
-const (
-    ModeAuto Mode = iota
-    ModeFile
-    ModeDir
-)
-
-type Kind int
-
-const (
-    KindFile Kind = iota
-    KindDir
-)
-
-type Action int
-
-const (
-    ActionNone Action = iota
-    ActionCreateFile
-    ActionCreateDir
-    ActionSkipExisting
-)
-
-type Options struct {
-    Mode     Mode
-    DirPerm  os.FileMode
-    FilePerm os.FileMode
-    DryRun   bool
-}
-
-type Result struct {
-    Path   string
-    Kind   Kind
-    Action Action
-}
-
-func Detect(path string) Kind
-func Create(path string, opts Options) (Result, error)
-func CreateMany(paths []string, opts Options) ([]Result, error)
-```
+Keep the core behavior small and centered on path detection and creation.
 
 Notes:
 
-- `Detect` should remain deterministic and side-effect free.
-- `Create` should be the main unit of behavior.
-- `CreateMany` should preserve input order.
-- `CreateMany` should stop at the first error.
-- If `CreateMany` fails, it should return the successful results collected before the failure together with the error.
-- `Result.Action` should describe the intended or executed action.
-- In dry-run mode, `Result.Action` should still report what would happen.
+- Detection should remain deterministic and side-effect free.
+- Single-path creation should be the main unit of behavior.
+- Multi-path processing should preserve input order.
+- Multi-path processing should stop at the first error.
+- If multi-path processing fails, it should return the successful results collected before the failure together with the error.
+- Dry-run mode should still report the action that would happen.
 
 ## Implementation notes
 
@@ -188,21 +141,22 @@ Keep the initial layout shallow.
 │   └── pouch/
 │       └── main.go
 ├── internal/
+│   ├── pouch/
+│   │   ├── create.go
+│   │   ├── detect.go
+│   │   ├── pouch.go
+│   │   └── types.go
 │   └── cli/
 │       └── flags.go
-├── pouch.go
-├── create.go
-├── detect.go
-├── types.go
 └── README.md
 ```
 
 Responsibilities:
 
-- `types.go`: public enums and option/result types
-- `detect.go`: detection logic only
-- `create.go`: core filesystem behavior
-- `pouch.go`: public entry points and small orchestration helpers
+- `internal/pouch/types.go`: shared enums and option/result types
+- `internal/pouch/detect.go`: detection logic only
+- `internal/pouch/create.go`: core filesystem behavior
+- `internal/pouch/pouch.go`: orchestration helpers for path processing
 - `cmd/pouch/main.go`: CLI entry point
 - `internal/cli/flags.go`: CLI flag parsing and validation
 
@@ -210,6 +164,8 @@ Do not split packages further unless the code clearly demands it.
 
 ## Testing
 
+- Use `go test ./...` from the repository root as the default test command.
+- Do not assume the repository root itself contains a buildable Go package.
 - Use table-driven tests when they make the cases easier to scan.
 - Use `t.TempDir()` for filesystem isolation.
 - Cover detection logic, file creation, directory creation, parent directory creation, explicit mode overrides, ambiguous names, and dry-run behavior.
@@ -239,7 +195,6 @@ Include:
 - `--mode auto|file|dir`
 - `--dry-run`
 - `--verbose`
-- Public Go package
 - Unit tests
 - README
 
@@ -254,7 +209,7 @@ Do not include:
 ## Review criteria
 
 - Does the code reflect the documented detection rule?
-- Is the public API smaller than the internal structure?
+- Is the CLI-oriented structure still smaller and simpler than the implementation behind it?
 - Are ambiguous cases documented rather than hidden?
 - Does the CLI output stay predictable and low-noise?
 - Are tests written from observable behavior rather than implementation trivia?
