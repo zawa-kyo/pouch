@@ -175,11 +175,8 @@ pouch [flags] PATH...
 
 `pouch` is intentionally narrow.
 
-| Included in v0.2                 | Not included in v0.2    |
-| -------------------------------- | ----------------------- |
-| macOS support                    | Windows support         |
-| Linux support                    | Template generation     |
-| Path creation from CLI arguments | File content generation |
-| Simple auto detection            | Project scaffolding     |
-| Explicit mode overrides          | Config files            |
-| Predictable CLI behavior         | Interactive prompts     |
+- Platform: focus on macOS and Linux.
+- Responsibility: turn CLI paths into files or directories. It does not define project structure or file contents.
+- Detection: use one small auto detection rule set, with `--mode` when explicit control matters.
+- UX: keep each invocation predictable and non-interactive.
+- Configuration: keep behavior local to each command instead of relying on config files.
