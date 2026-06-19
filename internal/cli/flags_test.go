@@ -31,6 +31,57 @@ func TestParseSuccess(t *testing.T) {
 		}
 	})
 
+	t.Run("parses trailing boolean flag after paths", func(t *testing.T) {
+		t.Parallel()
+		var stdout bytes.Buffer
+		var stderr bytes.Buffer
+
+		config, err := Parse([]string{"src/main.go", "test", "--dry-run"}, &stdout, &stderr)
+		if err != nil {
+			t.Fatalf("Parse() error = %v", err)
+		}
+		if len(config.Paths) != 2 || config.Paths[0] != "src/main.go" || config.Paths[1] != "test" {
+			t.Fatalf("unexpected paths: %+v", config.Paths)
+		}
+		if !config.Options.DryRun {
+			t.Fatalf("config.Options.DryRun = %v, want true", config.Options.DryRun)
+		}
+	})
+
+	t.Run("parses trailing value flag after path", func(t *testing.T) {
+		t.Parallel()
+		var stdout bytes.Buffer
+		var stderr bytes.Buffer
+
+		config, err := Parse([]string{"Dockerfile", "--mode", "file"}, &stdout, &stderr)
+		if err != nil {
+			t.Fatalf("Parse() error = %v", err)
+		}
+		if len(config.Paths) != 1 || config.Paths[0] != "Dockerfile" {
+			t.Fatalf("unexpected paths: %+v", config.Paths)
+		}
+		if config.Options.Mode != pouch.ModeFile {
+			t.Fatalf("config.Options.Mode = %v, want %v", config.Options.Mode, pouch.ModeFile)
+		}
+	})
+
+	t.Run("treats arguments after double dash as paths", func(t *testing.T) {
+		t.Parallel()
+		var stdout bytes.Buffer
+		var stderr bytes.Buffer
+
+		config, err := Parse([]string{"--dry-run", "--", "--dry-run"}, &stdout, &stderr)
+		if err != nil {
+			t.Fatalf("Parse() error = %v", err)
+		}
+		if len(config.Paths) != 1 || config.Paths[0] != "--dry-run" {
+			t.Fatalf("unexpected paths: %+v", config.Paths)
+		}
+		if !config.Options.DryRun {
+			t.Fatalf("config.Options.DryRun = %v, want true", config.Options.DryRun)
+		}
+	})
+
 }
 
 func TestParseErrors(t *testing.T) {

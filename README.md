@@ -78,7 +78,7 @@ Then install and activate it with:
 mise use -g pouch@latest
 ```
 
-## Why it exists
+## Why pouch
 
 Creating paths often means switching between commands:
 
@@ -159,6 +159,8 @@ Basic usage:
 ```sh
 pouch [flags] PATH...
 ```
+
+Flags can appear before or after `PATH...`. Use `--` if a path itself starts with `-`.
 
 | Flag                             | Meaning                                               |
 | -------------------------------- | ----------------------------------------------------- |

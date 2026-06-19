@@ -89,3 +89,27 @@ func TestRunVersionShortFlag(t *testing.T) {
 		t.Fatalf("stderr = %q, want empty", stderr.String())
 	}
 }
+
+func TestRunDryRunTrailingFlagDoesNotCreatePaths(t *testing.T) {
+	t.Parallel()
+
+	root := t.TempDir()
+	fileTarget := filepath.Join(root, "src", "main.go")
+	dirTarget := filepath.Join(root, "test")
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+
+	code := run([]string{fileTarget, dirTarget, "--dry-run"}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("run() code = %d, want 0", code)
+	}
+	if stderr.Len() != 0 {
+		t.Fatalf("stderr = %q, want empty", stderr.String())
+	}
+	if _, err := os.Stat(fileTarget); !os.IsNotExist(err) {
+		t.Fatalf("fileTarget exists after dry run, err = %v", err)
+	}
+	if _, err := os.Stat(dirTarget); !os.IsNotExist(err) {
+		t.Fatalf("dirTarget exists after dry run, err = %v", err)
+	}
+}
