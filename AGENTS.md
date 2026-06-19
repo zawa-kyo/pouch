@@ -1,4 +1,4 @@
-# pouch Agent Guide
+# Agent Guide
 
 ## Documentation sync
 
@@ -11,25 +11,24 @@
 
 - The README demo GIF is generated from `assets/demo.tape`.
 - When the demo changes, regenerate `assets/demo.gif` instead of editing the GIF by hand.
-- Demo generation requires `vhs`, `ttyd`, and `ffmpeg`.
+- Demo generation requires `vhs`, `ttyd`, `ffmpeg`, `tree`, and a runnable `pouch` binary on `PATH`.
 - Standard regeneration flow:
-  - Ensure `vhs`, `ttyd`, and `ffmpeg` are available on `PATH`.
-  - Run `vhs assets/demo.tape` from the repository root.
+  - Create an empty working directory outside the repository.
+  - Ensure `vhs`, `ttyd`, `ffmpeg`, `tree`, and `pouch` are available on `PATH`.
+  - Run `vhs /absolute/path/to/repo/assets/demo.tape` from that working directory.
+  - Copy the generated `demo.gif` to `assets/demo.gif` in the repository.
   - Verify that `assets/demo.gif` still matches the README examples and visible CLI behavior.
+  - Ask the user before deleting the temporary working directory.
 
 ## Purpose
 
-Use this file while building the first Go implementation of `pouch` from the contract in `README.md`.
+Use this file as guidance while implementing `pouch` from the contract in `README.md`.
 
 ## Scope
 
-- `pouch` is primarily a CLI.
-- The Go code in the repository exists to support the CLI and tests.
+- `pouch` is a CLI tool.
 - Do not treat the repository root package as a supported external library API.
-- Keep the project focused on path creation.
-- Do not expand it into a general scaffolding tool.
-- Target macOS and Linux only for v0.1.0.
-- Do not add Windows-specific behavior unless the product scope changes.
+- Keep the project focused on intuitive file and directory creation from paths.
 
 ## Product rules
 
