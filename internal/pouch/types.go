@@ -44,6 +44,7 @@ type Options struct {
 	DirPerm  os.FileMode
 	FilePerm os.FileMode
 	DryRun   bool
+	Strict   bool
 }
 
 // Result reports the observed or planned outcome for one path.

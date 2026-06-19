@@ -16,7 +16,7 @@ func create(path string, opts Options) (Result, error) {
 
 	info, err := os.Lstat(path)
 	if err == nil {
-		return handleExisting(path, info, kind, result)
+		return handleExisting(path, info, kind, result, opts)
 	}
 	if !errors.Is(err, os.ErrNotExist) {
 		return Result{}, fmt.Errorf("inspect %q: %w", path, err)
@@ -47,7 +47,7 @@ func detectWithMode(path string, mode Mode) (Kind, error) {
 	}
 }
 
-func handleExisting(path string, info os.FileInfo, kind Kind, result Result) (Result, error) {
+func handleExisting(path string, info os.FileInfo, kind Kind, result Result, opts Options) (Result, error) {
 	switch kind {
 	case KindFile:
 		if info.IsDir() {
@@ -56,6 +56,14 @@ func handleExisting(path string, info os.FileInfo, kind Kind, result Result) (Re
 	case KindDir:
 		if !info.IsDir() {
 			return Result{}, fmt.Errorf("create directory %q: path exists as file", path)
+		}
+	}
+	if opts.Strict {
+		switch kind {
+		case KindFile:
+			return Result{}, fmt.Errorf("create file %q: path already exists", path)
+		case KindDir:
+			return Result{}, fmt.Errorf("create directory %q: path already exists", path)
 		}
 	}
 	result.Action = ActionSkipExisting
@@ -86,7 +94,7 @@ func createFile(path string, opts Options, result Result) (Result, error) {
 			if statErr != nil {
 				return Result{}, fmt.Errorf("inspect %q after create race: %w", path, statErr)
 			}
-			return handleExisting(path, info, result.Kind, result)
+			return handleExisting(path, info, result.Kind, result, opts)
 		}
 		return Result{}, fmt.Errorf("create file %q: %w", path, err)
 	}
