@@ -14,14 +14,8 @@
 
 # 👜 pouch
 
-`pouch` is a small CLI that creates a file or directory from a path.
-It creates missing paths, but it leaves existing files unchanged.
-
-<!-- markdownlint-disable MD033 -->
-<p align="center">
-  <img src="./assets/demo.gif" alt="demo" width="640">
-</p>
-<!-- markdownlint-enable MD033 -->
+`pouch` creates files and directories from path-like CLI arguments.
+It creates missing paths and leaves existing files unchanged.
 
 It uses one small rule set in auto mode:
 
@@ -36,16 +30,24 @@ That rule lets you create common paths without stopping to choose between `mkdir
 ## Examples
 
 ```sh
-pouch notes
-pouch notes/today.md
+pouch foo
+pouch bar/baz.go
 pouch src/main.go test
 ```
 
 | Command                  | Result                                      |
 | ------------------------ | ------------------------------------------- |
-| `pouch notes`            | Creates the `notes` directory               |
-| `pouch notes/today.md`   | Creates parent directories, then `today.md` |
+| `pouch foo`              | Creates the `foo` directory                 |
+| `pouch bar/baz.go`       | Creates parent directories, then `baz.go`   |
 | `pouch src/main.go test` | Processes each path in input order          |
+
+In practice it looks like this:
+
+<!-- markdownlint-disable MD033 -->
+<p align="center">
+  <img src="./assets/demo.gif" alt="demo" width="640">
+</p>
+<!-- markdownlint-enable MD033 -->
 
 ## Installation
 
@@ -113,6 +115,8 @@ Auto mode first checks whether the path ends with `/`. If it does not, it looks 
 
 > [!NOTE]
 > `pouch` keeps this rule intentionally small. It does not infer intent from well-known filenames or MIME types. A trailing slash is the only explicit directory hint in auto mode.
+
+When that rule matches your intent, auto mode is enough. When it does not, use `--mode` to be explicit.
 
 ## When to use `--mode`
 
