@@ -103,6 +103,34 @@ func TestCreateAuto(t *testing.T) {
 			t.Fatalf("unexpected result: %+v", result)
 		}
 	})
+
+	t.Run("strict errors for existing file", func(t *testing.T) {
+		t.Parallel()
+		root := t.TempDir()
+		path := filepath.Join(root, "sample.ts")
+		if err := os.WriteFile(path, []byte("x"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+
+		_, err := Create(path, Options{Strict: true})
+		if err == nil {
+			t.Fatal("expected error")
+		}
+	})
+
+	t.Run("strict errors for existing directory", func(t *testing.T) {
+		t.Parallel()
+		root := t.TempDir()
+		path := filepath.Join(root, "sample")
+		if err := os.Mkdir(path, 0o755); err != nil {
+			t.Fatal(err)
+		}
+
+		_, err := Create(path, Options{Strict: true})
+		if err == nil {
+			t.Fatal("expected error")
+		}
+	})
 }
 
 func TestCreateModeOverrides(t *testing.T) {

@@ -65,6 +65,20 @@ func TestParseSuccess(t *testing.T) {
 		}
 	})
 
+	t.Run("parses strict flag", func(t *testing.T) {
+		t.Parallel()
+		var stdout bytes.Buffer
+		var stderr bytes.Buffer
+
+		config, err := Parse([]string{"sample", "--strict"}, &stdout, &stderr)
+		if err != nil {
+			t.Fatalf("Parse() error = %v", err)
+		}
+		if !config.Options.Strict {
+			t.Fatalf("config.Options.Strict = %v, want true", config.Options.Strict)
+		}
+	})
+
 	t.Run("treats arguments after double dash as paths", func(t *testing.T) {
 		t.Parallel()
 		var stdout bytes.Buffer

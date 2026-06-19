@@ -140,17 +140,21 @@ pouch --mode dir dir.with.dot
 
 If a path ends with `/`, `--mode file` returns an error instead of creating a file.
 
+Use `--strict` when you want existing paths to fail instead of being treated as a successful no-op.
+
 ## Behavior
 
 | Target kind | Behavior                                                   |
 | ----------- | ---------------------------------------------------------- |
 | File        | Creates missing parent directories                         |
 | File        | Creates the file if it does not exist                      |
-| File        | Leaves an existing file unchanged                          |
+| File        | Leaves an existing file unchanged by default               |
 | File        | Returns an error if the path already exists as a directory |
 | Directory   | Creates the directory with `mkdir -p` semantics            |
 | Directory   | Succeeds if the directory already exists                   |
 | Directory   | Returns an error if the path already exists as a file      |
+
+By default, `pouch` is idempotent: re-running the same command succeeds when the target already exists with the expected kind. Add `--strict` if you want that case to fail.
 
 ## CLI
 
@@ -167,6 +171,7 @@ Flags can appear before or after `PATH...`. Use `--` if a path itself starts wit
 | `-h`, `--help`                   | Show help                                             |
 | `-m`, `--mode <auto\|file\|dir>` | Force file or directory mode                          |
 | `-n`, `--dry-run`                | Print planned actions without changing the filesystem |
+| `-s`, `--strict`                 | Fail if a target already exists                       |
 | `-v`, `--version`                | Show version                                          |
 | `-V`, `--verbose`                | Print each action in input order                      |
 

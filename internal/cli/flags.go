@@ -29,6 +29,9 @@ func Parse(args []string, stdout, stderr io.Writer) (Config, error) {
 	dryRun := fs.Bool("dry-run", false, "")
 	fs.BoolVar(dryRun, "n", false, "")
 
+	strict := fs.Bool("strict", false, "")
+	fs.BoolVar(strict, "s", false, "")
+
 	verbose := fs.Bool("verbose", false, "")
 	fs.BoolVar(verbose, "V", false, "")
 
@@ -72,6 +75,7 @@ func Parse(args []string, stdout, stderr io.Writer) (Config, error) {
 		Options: pouch.Options{
 			Mode:   parsedMode,
 			DryRun: *dryRun,
+			Strict: *strict,
 		},
 		Verbose: *verbose,
 	}, nil
@@ -112,7 +116,7 @@ func splitArgs(args []string) ([]string, []string, error) {
 
 func isBoolFlag(arg string) bool {
 	switch arg {
-	case "--dry-run", "-n", "--verbose", "-V", "--help", "-h", "--version", "-v":
+	case "--dry-run", "-n", "--strict", "-s", "--verbose", "-V", "--help", "-h", "--version", "-v":
 		return true
 	default:
 		return false
@@ -137,6 +141,8 @@ func writeUsage(w io.Writer) {
 	fmt.Fprintln(w, "      Force file or directory mode.")
 	fmt.Fprintln(w, "  -n, --dry-run")
 	fmt.Fprintln(w, "      Print planned actions without changing the filesystem.")
+	fmt.Fprintln(w, "  -s, --strict")
+	fmt.Fprintln(w, "      Fail if a target already exists.")
 	fmt.Fprintln(w, "  -v, --version")
 	fmt.Fprintln(w, "      Show version.")
 	fmt.Fprintln(w, "  -V, --verbose")
