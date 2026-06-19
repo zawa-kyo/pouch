@@ -7,6 +7,16 @@
 - Update both files in a language pair within the same change unless the user explicitly asks for a temporary mismatch.
 - Prefer natural Japanese in `*-ja.md` files rather than line-by-line translation.
 
+## README media
+
+- The README demo GIF is generated from `assets/demo.tape`.
+- When the demo changes, regenerate `assets/demo.gif` instead of editing the GIF by hand.
+- Demo generation requires `vhs`, `ttyd`, and `ffmpeg`.
+- Standard regeneration flow:
+  - Ensure `vhs`, `ttyd`, and `ffmpeg` are available on `PATH`.
+  - Run `vhs assets/demo.tape` from the repository root.
+  - Verify that `assets/demo.gif` still matches the README examples and visible CLI behavior.
+
 ## Purpose
 
 Use this file while building the first Go implementation of `pouch` from the contract in `README.md`.
