@@ -88,11 +88,11 @@ mkdir -p src && touch src/main.go
 ```
 
 The name `pouch` comes from that muscle memory: `mkdir -p` for directories, `touch` for files.
-This tool folds those two habits into one small command that accepts a path and does the obvious thing with one detection rule set.
+`pouch` folds those two habits into one small command. You pass a path, and it follows one simple rule set to do the obvious thing.
 
-It is meant for the moment when you know the path you want, but you do not want to stop and spell out whether this one needs `mkdir -p`, `touch`, or both.
+It is for the moment when you already know the path you want, but you do not want to stop and spell out whether this one needs `mkdir -p`, `touch`, or both.
 
-## Related tools
+## Compared with `mkdir -p` and `touch`
 
 `pouch` sits on top of a familiar idea rather than replacing an existing standard tool.
 
