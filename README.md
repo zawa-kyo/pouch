@@ -1,25 +1,21 @@
 <!-- markdownlint-disable MD033 -->
 <p align="center">
-  <img src="./assets/logo.jpeg" alt="logo">
+  <img src="./assets/logo.jpeg" alt="logo" width="400">
 </p>
 
 <div align="center">
-  <a href="https://github.com/koki-develop/gat/releases/latest"><img src="https://img.shields.io/github/v/release/zawa-kyo/pouch" alt="release"></a>
+  <a href="https://github.com/zawa-kyo/pouch/releases/latest"><img src="https://img.shields.io/github/v/release/zawa-kyo/pouch" alt="release"></a>
   <a href="https://github.com/zawa-kyo/pouch?tab=MIT-1-ov-file"><img src="https://img.shields.io/github/license/zawa-kyo/pouch" alt="license"></a>
   <a href="https://github.com/zawa-kyo/pouch/actions/workflows/ci.yml"><img src="https://github.com/zawa-kyo/pouch/actions/workflows/ci.yml/badge.svg?branch=main" alt="ci"></a>
   <a href="https://goreportcard.com/report/github.com/zawa-kyo/pouch"><img src="https://goreportcard.com/badge/github.com/zawa-kyo/pouch" alt="report"></a>
   <a href="https://github.com/zawa-kyo/pouch/tree/main"><img src="https://img.shields.io/github/repo-size/zawa-kyo/pouch" alt="size"></a>
 </div>
-
-<p align="center">
-  <img src="./assets/demo.gif" alt="logo">
-</p>
 <!-- markdownlint-enable MD033 -->
 
 # 👜 pouch
 
-`pouch` is a small CLI that creates a file or directory from a path.
-It creates missing paths, but it leaves existing files unchanged.
+`pouch` creates files and directories from path-like CLI arguments.
+It creates missing paths and leaves existing files unchanged.
 
 It uses one small rule set in auto mode:
 
@@ -34,16 +30,24 @@ That rule lets you create common paths without stopping to choose between `mkdir
 ## Examples
 
 ```sh
-pouch notes
-pouch notes/today.md
+pouch foo
+pouch bar/baz.go
 pouch src/main.go test
 ```
 
 | Command                  | Result                                      |
 | ------------------------ | ------------------------------------------- |
-| `pouch notes`            | Creates the `notes` directory               |
-| `pouch notes/today.md`   | Creates parent directories, then `today.md` |
+| `pouch foo`              | Creates the `foo` directory                 |
+| `pouch bar/baz.go`       | Creates parent directories, then `baz.go`   |
 | `pouch src/main.go test` | Processes each path in input order          |
+
+In practice it looks like this:
+
+<!-- markdownlint-disable MD033 -->
+<p align="center">
+  <img src="./assets/demo.gif" alt="demo" width="640">
+</p>
+<!-- markdownlint-enable MD033 -->
 
 ## Installation
 
@@ -74,7 +78,7 @@ Then install and activate it with:
 mise use -g pouch@latest
 ```
 
-## Why it exists
+## Why pouch
 
 Creating paths often means switching between commands:
 
@@ -84,11 +88,11 @@ mkdir -p src && touch src/main.go
 ```
 
 The name `pouch` comes from that muscle memory: `mkdir -p` for directories, `touch` for files.
-This tool folds those two habits into one small command that accepts a path and does the obvious thing with one detection rule set.
+`pouch` folds those two habits into one small command. You pass a path, and it follows one simple rule set to do the obvious thing.
 
-It is meant for the moment when you know the path you want, but you do not want to stop and spell out whether this one needs `mkdir -p`, `touch`, or both.
+It is for the moment when you already know the path you want, but you do not want to stop and spell out whether this one needs `mkdir -p`, `touch`, or both.
 
-## Related tools
+## Compared with `mkdir -p` and `touch`
 
 `pouch` sits on top of a familiar idea rather than replacing an existing standard tool.
 
@@ -112,6 +116,8 @@ Auto mode first checks whether the path ends with `/`. If it does not, it looks 
 > [!NOTE]
 > `pouch` keeps this rule intentionally small. It does not infer intent from well-known filenames or MIME types. A trailing slash is the only explicit directory hint in auto mode.
 
+When that rule matches your intent, auto mode is enough. When it does not, use `--mode` to be explicit.
+
 ## When to use `--mode`
 
 Some names are ambiguous under the auto rule:
@@ -134,17 +140,21 @@ pouch --mode dir dir.with.dot
 
 If a path ends with `/`, `--mode file` returns an error instead of creating a file.
 
+Use `--strict` when you want existing paths to fail instead of being treated as a successful no-op.
+
 ## Behavior
 
 | Target kind | Behavior                                                   |
 | ----------- | ---------------------------------------------------------- |
 | File        | Creates missing parent directories                         |
 | File        | Creates the file if it does not exist                      |
-| File        | Leaves an existing file unchanged                          |
+| File        | Leaves an existing file unchanged by default               |
 | File        | Returns an error if the path already exists as a directory |
 | Directory   | Creates the directory with `mkdir -p` semantics            |
 | Directory   | Succeeds if the directory already exists                   |
 | Directory   | Returns an error if the path already exists as a file      |
+
+By default, `pouch` is idempotent: re-running the same command succeeds when the target already exists with the expected kind. Add `--strict` if you want that case to fail.
 
 ## CLI
 
@@ -154,11 +164,14 @@ Basic usage:
 pouch [flags] PATH...
 ```
 
+Flags can appear before or after `PATH...`. Use `--` if a path itself starts with `-`.
+
 | Flag                             | Meaning                                               |
 | -------------------------------- | ----------------------------------------------------- |
 | `-h`, `--help`                   | Show help                                             |
 | `-m`, `--mode <auto\|file\|dir>` | Force file or directory mode                          |
 | `-n`, `--dry-run`                | Print planned actions without changing the filesystem |
+| `-s`, `--strict`                 | Fail if a target already exists                       |
 | `-v`, `--version`                | Show version                                          |
 | `-V`, `--verbose`                | Print each action in input order                      |
 
@@ -173,11 +186,8 @@ pouch [flags] PATH...
 
 `pouch` is intentionally narrow.
 
-| Included in v0.1                 | Not included in v0.1    |
-| -------------------------------- | ----------------------- |
-| macOS support                    | Windows support         |
-| Linux support                    | Template generation     |
-| Path creation from CLI arguments | File content generation |
-| Simple auto detection            | Project scaffolding     |
-| Explicit mode overrides          | Config files            |
-| Predictable CLI behavior         | Interactive prompts     |
+- Platform: focus on macOS and Linux.
+- Responsibility: turn CLI paths into files or directories. It does not define project structure or file contents.
+- Detection: use one small auto detection rule set, with `--mode` when explicit control matters.
+- UX: keep each invocation predictable and non-interactive.
+- Configuration: keep behavior local to each command instead of relying on config files.

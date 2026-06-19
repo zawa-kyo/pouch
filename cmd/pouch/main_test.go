@@ -89,3 +89,50 @@ func TestRunVersionShortFlag(t *testing.T) {
 		t.Fatalf("stderr = %q, want empty", stderr.String())
 	}
 }
+
+func TestRunDryRunTrailingFlagDoesNotCreatePaths(t *testing.T) {
+	t.Parallel()
+
+	root := t.TempDir()
+	fileTarget := filepath.Join(root, "src", "main.go")
+	dirTarget := filepath.Join(root, "test")
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+
+	code := run([]string{fileTarget, dirTarget, "--dry-run"}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("run() code = %d, want 0", code)
+	}
+	if stderr.Len() != 0 {
+		t.Fatalf("stderr = %q, want empty", stderr.String())
+	}
+	if _, err := os.Stat(fileTarget); !os.IsNotExist(err) {
+		t.Fatalf("fileTarget exists after dry run, err = %v", err)
+	}
+	if _, err := os.Stat(dirTarget); !os.IsNotExist(err) {
+		t.Fatalf("dirTarget exists after dry run, err = %v", err)
+	}
+}
+
+func TestRunStrictFailsForExistingPath(t *testing.T) {
+	t.Parallel()
+
+	root := t.TempDir()
+	target := filepath.Join(root, "sample")
+	if err := os.Mkdir(target, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+
+	code := run([]string{target, "--strict"}, &stdout, &stderr)
+	if code != 1 {
+		t.Fatalf("run() code = %d, want 1", code)
+	}
+	if stdout.Len() != 0 {
+		t.Fatalf("stdout = %q, want empty", stdout.String())
+	}
+	if !strings.Contains(stderr.String(), "already exists") {
+		t.Fatalf("stderr = %q, want existing-path error", stderr.String())
+	}
+}
