@@ -29,6 +29,9 @@ func Parse(args []string, stdout, stderr io.Writer) (Config, error) {
 	dryRun := fs.Bool("dry-run", false, "")
 	fs.BoolVar(dryRun, "n", false, "")
 
+	strict := fs.Bool("strict", false, "")
+	fs.BoolVar(strict, "s", false, "")
+
 	verbose := fs.Bool("verbose", false, "")
 	fs.BoolVar(verbose, "V", false, "")
 
@@ -40,7 +43,12 @@ func Parse(args []string, stdout, stderr io.Writer) (Config, error) {
 
 	fs.Usage = func() { writeUsage(stderr) }
 
-	if err := fs.Parse(args); err != nil {
+	flagArgs, paths, err := splitArgs(args)
+	if err != nil {
+		return Config{}, err
+	}
+
+	if err := fs.Parse(flagArgs); err != nil {
 		return Config{}, err
 	}
 
@@ -53,7 +61,6 @@ func Parse(args []string, stdout, stderr io.Writer) (Config, error) {
 		return Config{ShowVersion: true}, nil
 	}
 
-	paths := fs.Args()
 	if len(paths) == 0 {
 		return Config{}, errors.New("PATH... is required")
 	}
@@ -68,9 +75,60 @@ func Parse(args []string, stdout, stderr io.Writer) (Config, error) {
 		Options: pouch.Options{
 			Mode:   parsedMode,
 			DryRun: *dryRun,
+			Strict: *strict,
 		},
 		Verbose: *verbose,
 	}, nil
+}
+
+func splitArgs(args []string) ([]string, []string, error) {
+	flagArgs := make([]string, 0, len(args))
+	paths := make([]string, 0, len(args))
+
+	for i := 0; i < len(args); i++ {
+		arg := args[i]
+		if arg == "--" {
+			paths = append(paths, args[i+1:]...)
+			return flagArgs, paths, nil
+		}
+
+		if !strings.HasPrefix(arg, "-") || arg == "-" {
+			paths = append(paths, arg)
+			continue
+		}
+
+		switch {
+		case isBoolFlag(arg), isInlineModeFlag(arg):
+			flagArgs = append(flagArgs, arg)
+		case isModeFlag(arg):
+			if i+1 >= len(args) {
+				return nil, nil, fmt.Errorf("flag needs an argument: %s", arg)
+			}
+			flagArgs = append(flagArgs, arg, args[i+1])
+			i++
+		default:
+			flagArgs = append(flagArgs, arg)
+		}
+	}
+
+	return flagArgs, paths, nil
+}
+
+func isBoolFlag(arg string) bool {
+	switch arg {
+	case "--dry-run", "-n", "--strict", "-s", "--verbose", "-V", "--help", "-h", "--version", "-v":
+		return true
+	default:
+		return false
+	}
+}
+
+func isModeFlag(arg string) bool {
+	return arg == "--mode" || arg == "-m"
+}
+
+func isInlineModeFlag(arg string) bool {
+	return strings.HasPrefix(arg, "--mode=") || strings.HasPrefix(arg, "-m=")
 }
 
 func writeUsage(w io.Writer) {
@@ -83,6 +141,8 @@ func writeUsage(w io.Writer) {
 	fmt.Fprintln(w, "      Force file or directory mode.")
 	fmt.Fprintln(w, "  -n, --dry-run")
 	fmt.Fprintln(w, "      Print planned actions without changing the filesystem.")
+	fmt.Fprintln(w, "  -s, --strict")
+	fmt.Fprintln(w, "      Fail if a target already exists.")
 	fmt.Fprintln(w, "  -v, --version")
 	fmt.Fprintln(w, "      Show version.")
 	fmt.Fprintln(w, "  -V, --verbose")
