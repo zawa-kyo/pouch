@@ -1,6 +1,6 @@
 <!-- markdownlint-disable MD033 -->
 <p align="center">
-  <img src="./assets/logo.jpeg" alt="logo">
+  <img src="./assets/logo.jpeg" alt="logo" width="360">
 </p>
 
 <div align="center">
@@ -19,7 +19,7 @@ It creates missing paths, but it leaves existing files unchanged.
 
 <!-- markdownlint-disable MD033 -->
 <p align="center">
-  <img src="./assets/demo.gif" alt="demo">
+  <img src="./assets/demo.gif" alt="demo" width="640">
 </p>
 <!-- markdownlint-enable MD033 -->
 
