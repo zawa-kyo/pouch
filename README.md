@@ -140,7 +140,15 @@ pouch --mode dir dir.with.dot
 
 If a path ends with `/`, `--mode file` returns an error instead of creating a file.
 
-Use `--strict` when you want existing paths to fail instead of being treated as a successful no-op.
+## When to use `--strict`
+
+By default, `pouch` is safe to run again. If the target already exists with the expected kind, the command succeeds without changing it.
+
+Use `--strict` when an existing target should fail instead:
+
+```sh
+pouch --strict src/main.go test
+```
 
 ## Behavior
 
@@ -153,8 +161,6 @@ Use `--strict` when you want existing paths to fail instead of being treated as 
 | Directory   | Creates the directory with `mkdir -p` semantics            |
 | Directory   | Succeeds if the directory already exists                   |
 | Directory   | Returns an error if the path already exists as a file      |
-
-By default, `pouch` is idempotent: re-running the same command succeeds when the target already exists with the expected kind. Add `--strict` if you want that case to fail.
 
 ## CLI
 
