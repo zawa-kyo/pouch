@@ -9,128 +9,120 @@ import (
 func TestCreateAuto(t *testing.T) {
 	t.Parallel()
 
-	t.Run("creates directory in auto mode", func(t *testing.T) {
-		t.Parallel()
-		root := t.TempDir()
-		path := filepath.Join(root, "sample")
+	tests := []struct {
+		name    string
+		path    func(string) string
+		prepare func(*testing.T, string)
+		options Options
+		verify  func(*testing.T, string, Result)
+		wantErr bool
+	}{
+		{
+			name: "creates directory in auto mode",
+			path: func(root string) string { return filepath.Join(root, "sample") },
+			verify: func(t *testing.T, path string, result Result) {
+				assertResult(t, result, KindDir, ActionCreateDir)
+				assertDirExists(t, path)
+			},
+		},
+		{
+			name: "creates file in auto mode",
+			path: func(root string) string { return filepath.Join(root, "sample.ts") },
+			verify: func(t *testing.T, path string, result Result) {
+				assertResult(t, result, KindFile, ActionCreateFile)
+				assertFileExists(t, path)
+			},
+		},
+		{
+			name: "creates parent directory for file",
+			path: func(root string) string { return filepath.Join(root, "sample", "temp.ts") },
+			verify: func(t *testing.T, path string, result Result) {
+				assertAction(t, result, ActionCreateFile)
+				assertDirExists(t, filepath.Dir(path))
+				assertFileExists(t, path)
+			},
+		},
+		{
+			name: "trailing slash creates directory in auto mode",
+			path: func(root string) string {
+				return filepath.Join(root, "dir.with.dot") + string(filepath.Separator)
+			},
+			verify: func(t *testing.T, path string, result Result) {
+				assertResult(t, result, KindDir, ActionCreateDir)
+				assertDirExists(t, filepath.Clean(path))
+			},
+		},
+		{
+			name: "skips existing file",
+			path: func(root string) string { return filepath.Join(root, "sample.ts") },
+			prepare: func(t *testing.T, path string) {
+				if err := os.WriteFile(path, []byte("x"), 0o644); err != nil {
+					t.Fatal(err)
+				}
+			},
+			verify: func(t *testing.T, _ string, result Result) {
+				assertResult(t, result, KindFile, ActionSkipExisting)
+			},
+		},
+		{
+			name: "skips existing directory",
+			path: func(root string) string { return filepath.Join(root, "sample") },
+			prepare: func(t *testing.T, path string) {
+				if err := os.Mkdir(path, 0o755); err != nil {
+					t.Fatal(err)
+				}
+			},
+			verify: func(t *testing.T, _ string, result Result) {
+				assertResult(t, result, KindDir, ActionSkipExisting)
+			},
+		},
+		{
+			name: "strict errors for existing file",
+			path: func(root string) string { return filepath.Join(root, "sample.ts") },
+			prepare: func(t *testing.T, path string) {
+				if err := os.WriteFile(path, []byte("x"), 0o644); err != nil {
+					t.Fatal(err)
+				}
+			},
+			options: Options{Strict: true},
+			wantErr: true,
+		},
+		{
+			name: "strict errors for existing directory",
+			path: func(root string) string { return filepath.Join(root, "sample") },
+			prepare: func(t *testing.T, path string) {
+				if err := os.Mkdir(path, 0o755); err != nil {
+					t.Fatal(err)
+				}
+			},
+			options: Options{Strict: true},
+			wantErr: true,
+		},
+	}
 
-		result, err := Create(path, Options{})
-		if err != nil {
-			t.Fatalf("Create() error = %v", err)
-		}
-		if result.Kind != KindDir || result.Action != ActionCreateDir {
-			t.Fatalf("unexpected result: %+v", result)
-		}
-		assertDirExists(t, path)
-	})
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			root := t.TempDir()
+			path := tt.path(root)
+			if tt.prepare != nil {
+				tt.prepare(t, path)
+			}
 
-	t.Run("creates file in auto mode", func(t *testing.T) {
-		t.Parallel()
-		root := t.TempDir()
-		path := filepath.Join(root, "sample.ts")
-
-		result, err := Create(path, Options{})
-		if err != nil {
-			t.Fatalf("Create() error = %v", err)
-		}
-		if result.Kind != KindFile || result.Action != ActionCreateFile {
-			t.Fatalf("unexpected result: %+v", result)
-		}
-		assertFileExists(t, path)
-	})
-
-	t.Run("creates parent directory for file", func(t *testing.T) {
-		t.Parallel()
-		root := t.TempDir()
-		path := filepath.Join(root, "sample", "temp.ts")
-
-		result, err := Create(path, Options{})
-		if err != nil {
-			t.Fatalf("Create() error = %v", err)
-		}
-		if result.Action != ActionCreateFile {
-			t.Fatalf("unexpected action: %+v", result)
-		}
-		assertDirExists(t, filepath.Dir(path))
-		assertFileExists(t, path)
-	})
-
-	t.Run("trailing slash creates directory in auto mode", func(t *testing.T) {
-		t.Parallel()
-		root := t.TempDir()
-		path := filepath.Join(root, "dir.with.dot") + string(filepath.Separator)
-
-		result, err := Create(path, Options{})
-		if err != nil {
-			t.Fatalf("Create() error = %v", err)
-		}
-		if result.Kind != KindDir || result.Action != ActionCreateDir {
-			t.Fatalf("unexpected result: %+v", result)
-		}
-		assertDirExists(t, filepath.Clean(path))
-	})
-
-	t.Run("skips existing file", func(t *testing.T) {
-		t.Parallel()
-		root := t.TempDir()
-		path := filepath.Join(root, "sample.ts")
-		if err := os.WriteFile(path, []byte("x"), 0o644); err != nil {
-			t.Fatal(err)
-		}
-
-		result, err := Create(path, Options{})
-		if err != nil {
-			t.Fatalf("Create() error = %v", err)
-		}
-		if result.Action != ActionSkipExisting || result.Kind != KindFile {
-			t.Fatalf("unexpected result: %+v", result)
-		}
-	})
-
-	t.Run("skips existing directory", func(t *testing.T) {
-		t.Parallel()
-		root := t.TempDir()
-		path := filepath.Join(root, "sample")
-		if err := os.Mkdir(path, 0o755); err != nil {
-			t.Fatal(err)
-		}
-
-		result, err := Create(path, Options{})
-		if err != nil {
-			t.Fatalf("Create() error = %v", err)
-		}
-		if result.Action != ActionSkipExisting || result.Kind != KindDir {
-			t.Fatalf("unexpected result: %+v", result)
-		}
-	})
-
-	t.Run("strict errors for existing file", func(t *testing.T) {
-		t.Parallel()
-		root := t.TempDir()
-		path := filepath.Join(root, "sample.ts")
-		if err := os.WriteFile(path, []byte("x"), 0o644); err != nil {
-			t.Fatal(err)
-		}
-
-		_, err := Create(path, Options{Strict: true})
-		if err == nil {
-			t.Fatal("expected error")
-		}
-	})
-
-	t.Run("strict errors for existing directory", func(t *testing.T) {
-		t.Parallel()
-		root := t.TempDir()
-		path := filepath.Join(root, "sample")
-		if err := os.Mkdir(path, 0o755); err != nil {
-			t.Fatal(err)
-		}
-
-		_, err := Create(path, Options{Strict: true})
-		if err == nil {
-			t.Fatal("expected error")
-		}
-	})
+			result, err := Create(path, tt.options)
+			if tt.wantErr {
+				if err == nil {
+					t.Fatal("expected error")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("Create() error = %v", err)
+			}
+			tt.verify(t, path, result)
+		})
+	}
 }
 
 func TestCreateModeOverrides(t *testing.T) {
@@ -313,5 +305,19 @@ func assertDirExists(t *testing.T, path string) {
 	}
 	if !info.IsDir() {
 		t.Fatalf("%q is file, want directory", path)
+	}
+}
+
+func assertResult(t *testing.T, result Result, wantKind Kind, wantAction Action) {
+	t.Helper()
+	if result.Kind != wantKind || result.Action != wantAction {
+		t.Fatalf("unexpected result: %+v", result)
+	}
+}
+
+func assertAction(t *testing.T, result Result, want Action) {
+	t.Helper()
+	if result.Action != want {
+		t.Fatalf("unexpected action: %+v", result)
 	}
 }

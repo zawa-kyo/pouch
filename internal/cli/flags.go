@@ -18,8 +18,56 @@ type Config struct {
 	ShowVersion bool
 }
 
+type flagValues struct {
+	mode        *string
+	fileMode    *bool
+	dirMode     *bool
+	dryRun      *bool
+	strict      *bool
+	verbose     *bool
+	help        *bool
+	showVersion *bool
+}
+
 // Parse converts CLI arguments into a validated Config.
 func Parse(args []string, stdout, stderr io.Writer) (Config, error) {
+	fs, values := newFlagSet(stdout, stderr)
+	flagArgs, paths, err := splitArgs(args)
+	if err != nil {
+		return Config{}, err
+	}
+	if err := fs.Parse(flagArgs); err != nil {
+		return Config{}, err
+	}
+	if handled, config := handleSpecialFlags(values, stdout); handled {
+		return config, flag.ErrHelp
+	}
+	if *values.showVersion {
+		return Config{ShowVersion: true}, nil
+	}
+	if err := validateFlags(fs, values); err != nil {
+		return Config{}, err
+	}
+	if err := validatePaths(paths); err != nil {
+		return Config{}, err
+	}
+	parsedMode, err := resolveMode(fs, values)
+	if err != nil {
+		return Config{}, err
+	}
+
+	return Config{
+		Paths: paths,
+		Options: pouch.Options{
+			Mode:   parsedMode,
+			DryRun: *values.dryRun,
+			Strict: *values.strict,
+		},
+		Verbose: *values.verbose,
+	}, nil
+}
+
+func newFlagSet(stdout, stderr io.Writer) (*flag.FlagSet, flagValues) {
 	fs := flag.NewFlagSet("pouch", flag.ContinueOnError)
 	fs.SetOutput(stderr)
 
@@ -46,62 +94,69 @@ func Parse(args []string, stdout, stderr io.Writer) (Config, error) {
 
 	fs.Usage = func() { writeUsage(stderr) }
 
-	flagArgs, paths, err := splitArgs(args)
-	if err != nil {
-		return Config{}, err
+	return fs, flagValues{
+		mode:        mode,
+		fileMode:    fileMode,
+		dirMode:     dirMode,
+		dryRun:      dryRun,
+		strict:      strict,
+		verbose:     verbose,
+		help:        help,
+		showVersion: showVersion,
+	}
+}
+
+func handleSpecialFlags(values flagValues, stdout io.Writer) (bool, Config) {
+	if !*values.help {
+		return false, Config{}
 	}
 
-	if err := fs.Parse(flagArgs); err != nil {
-		return Config{}, err
-	}
+	writeUsage(stdout)
+	return true, Config{}
+}
 
-	if *help {
-		writeUsage(stdout)
-		return Config{}, flag.ErrHelp
+func validateFlags(fs *flag.FlagSet, values flagValues) error {
+	modeFlagSet := hasModeFlag(fs)
+	if *values.fileMode && *values.dirMode {
+		return errors.New("--file and --dir cannot be used together")
 	}
-
-	if *showVersion {
-		return Config{ShowVersion: true}, nil
+	if modeFlagSet && (*values.fileMode || *values.dirMode) {
+		return errors.New("--mode cannot be used with --file or --dir")
 	}
+	return nil
+}
 
+func hasModeFlag(fs *flag.FlagSet) bool {
 	modeFlagSet := false
 	fs.Visit(func(f *flag.Flag) {
 		if f.Name == "mode" || f.Name == "m" {
 			modeFlagSet = true
 		}
 	})
+	return modeFlagSet
+}
 
-	if *fileMode && *dirMode {
-		return Config{}, errors.New("--file and --dir cannot be used together")
-	}
-	if modeFlagSet && (*fileMode || *dirMode) {
-		return Config{}, errors.New("--mode cannot be used with --file or --dir")
-	}
-
+func validatePaths(paths []string) error {
 	if len(paths) == 0 {
-		return Config{}, errors.New("PATH... is required")
+		return errors.New("PATH... is required")
 	}
+	return nil
+}
 
-	parsedMode, err := parseMode(*mode)
+func resolveMode(fs *flag.FlagSet, values flagValues) (pouch.Mode, error) {
+	parsedMode, err := parseMode(*values.mode)
 	if err != nil {
-		return Config{}, err
+		return parsedMode, err
 	}
-	if *fileMode {
-		parsedMode = pouch.ModeFile
+	if !hasModeFlag(fs) {
+		if *values.fileMode {
+			return pouch.ModeFile, nil
+		}
+		if *values.dirMode {
+			return pouch.ModeDir, nil
+		}
 	}
-	if *dirMode {
-		parsedMode = pouch.ModeDir
-	}
-
-	return Config{
-		Paths: paths,
-		Options: pouch.Options{
-			Mode:   parsedMode,
-			DryRun: *dryRun,
-			Strict: *strict,
-		},
-		Verbose: *verbose,
-	}, nil
+	return parsedMode, nil
 }
 
 func splitArgs(args []string) ([]string, []string, error) {
