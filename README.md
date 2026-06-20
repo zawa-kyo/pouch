@@ -17,7 +17,19 @@
 `pouch` creates files and directories from path-like CLI arguments.
 It creates missing paths and leaves existing files unchanged.
 
-It uses one small rule set in auto mode:
+It is for the moment when you already know the path you want, but you do not want to stop and spell out whether this one needs `mkdir -p`, `touch`, or both.
+
+## Why pouch
+
+Creating paths often means switching between commands:
+
+```sh
+mkdir -p notes
+mkdir -p src && touch src/main.go
+```
+
+The name `pouch` comes from that muscle memory: `mkdir -p` for directories, `touch` for files.
+`pouch` folds those two habits into one small command. You pass a path, and it follows one simple rule set to do the obvious thing:
 
 | Path shape                 | Result               |
 | -------------------------- | -------------------- |
@@ -25,7 +37,7 @@ It uses one small rule set in auto mode:
 | Final segment contains `.` | Treat as a file      |
 | Otherwise                  | Treat as a directory |
 
-That rule lets you create common paths without stopping to choose between `mkdir -p` and `touch`.
+That rule is intentionally small. `pouch` is not a scaffolding tool; it just creates the path you asked for.
 
 ## Examples
 
@@ -77,20 +89,6 @@ Then install and activate it with:
 ```sh
 mise use -g pouch@latest
 ```
-
-## Why pouch
-
-Creating paths often means switching between commands:
-
-```sh
-mkdir -p notes
-mkdir -p src && touch src/main.go
-```
-
-The name `pouch` comes from that muscle memory: `mkdir -p` for directories, `touch` for files.
-`pouch` folds those two habits into one small command. You pass a path, and it follows one simple rule set to do the obvious thing.
-
-It is for the moment when you already know the path you want, but you do not want to stop and spell out whether this one needs `mkdir -p`, `touch`, or both.
 
 ## Compared with `mkdir -p` and `touch`
 
