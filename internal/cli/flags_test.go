@@ -11,125 +11,87 @@ import (
 func TestParseSuccess(t *testing.T) {
 	t.Parallel()
 
-	t.Run("parses flags and paths", func(t *testing.T) {
-		t.Parallel()
-		var stdout bytes.Buffer
-		var stderr bytes.Buffer
+	tests := []struct {
+		name   string
+		args   []string
+		verify func(*testing.T, Config, string, string)
+	}{
+		{
+			name: "parses flags and paths",
+			args: []string{"--mode", "file", "--dry-run", "--verbose", "Dockerfile"},
+			verify: func(t *testing.T, config Config, stdout, stderr string) {
+				assertPaths(t, config.Paths, "Dockerfile")
+				assertMode(t, config, pouch.ModeFile)
+				assertDryRun(t, config, true)
+				assertVerbose(t, config, true)
+				assertOutputEmpty(t, stdout, stderr)
+			},
+		},
+		{
+			name: "parses trailing boolean flag after paths",
+			args: []string{"src/main.go", "test", "--dry-run"},
+			verify: func(t *testing.T, config Config, _, _ string) {
+				assertPaths(t, config.Paths, "src/main.go", "test")
+				assertDryRun(t, config, true)
+			},
+		},
+		{
+			name: "parses trailing value flag after path",
+			args: []string{"Dockerfile", "--mode", "file"},
+			verify: func(t *testing.T, config Config, _, _ string) {
+				assertPaths(t, config.Paths, "Dockerfile")
+				assertMode(t, config, pouch.ModeFile)
+			},
+		},
+		{
+			name: "parses trailing inline mode flag after path",
+			args: []string{"Dockerfile", "--mode=file"},
+			verify: func(t *testing.T, config Config, _, _ string) {
+				assertPaths(t, config.Paths, "Dockerfile")
+				assertMode(t, config, pouch.ModeFile)
+			},
+		},
+		{
+			name: "parses file mode flag",
+			args: []string{"Dockerfile", "--file"},
+			verify: func(t *testing.T, config Config, _, _ string) {
+				assertPaths(t, config.Paths, "Dockerfile")
+				assertMode(t, config, pouch.ModeFile)
+			},
+		},
+		{
+			name: "parses dir mode flag",
+			args: []string{"dir.with.dot", "--dir"},
+			verify: func(t *testing.T, config Config, _, _ string) {
+				assertPaths(t, config.Paths, "dir.with.dot")
+				assertMode(t, config, pouch.ModeDir)
+			},
+		},
+		{
+			name: "parses strict flag",
+			args: []string{"sample", "--strict"},
+			verify: func(t *testing.T, config Config, _, _ string) {
+				assertStrict(t, config, true)
+			},
+		},
+		{
+			name: "treats arguments after double dash as paths",
+			args: []string{"--dry-run", "--", "--dry-run"},
+			verify: func(t *testing.T, config Config, _, _ string) {
+				assertPaths(t, config.Paths, "--dry-run")
+				assertDryRun(t, config, true)
+			},
+		},
+	}
 
-		config, err := Parse([]string{"--mode", "file", "--dry-run", "--verbose", "Dockerfile"}, &stdout, &stderr)
-		if err != nil {
-			t.Fatalf("Parse() error = %v", err)
-		}
-		if len(config.Paths) != 1 || config.Paths[0] != "Dockerfile" {
-			t.Fatalf("unexpected paths: %+v", config.Paths)
-		}
-		if config.Options.Mode != pouch.ModeFile || !config.Options.DryRun || !config.Verbose {
-			t.Fatalf("unexpected config: %+v", config)
-		}
-		if stdout.Len() != 0 || stderr.Len() != 0 {
-			t.Fatalf("unexpected output: stdout=%q stderr=%q", stdout.String(), stderr.String())
-		}
-	})
-
-	t.Run("parses trailing boolean flag after paths", func(t *testing.T) {
-		t.Parallel()
-		var stdout bytes.Buffer
-		var stderr bytes.Buffer
-
-		config, err := Parse([]string{"src/main.go", "test", "--dry-run"}, &stdout, &stderr)
-		if err != nil {
-			t.Fatalf("Parse() error = %v", err)
-		}
-		if len(config.Paths) != 2 || config.Paths[0] != "src/main.go" || config.Paths[1] != "test" {
-			t.Fatalf("unexpected paths: %+v", config.Paths)
-		}
-		if !config.Options.DryRun {
-			t.Fatalf("config.Options.DryRun = %v, want true", config.Options.DryRun)
-		}
-	})
-
-	t.Run("parses trailing value flag after path", func(t *testing.T) {
-		t.Parallel()
-		var stdout bytes.Buffer
-		var stderr bytes.Buffer
-
-		config, err := Parse([]string{"Dockerfile", "--mode", "file"}, &stdout, &stderr)
-		if err != nil {
-			t.Fatalf("Parse() error = %v", err)
-		}
-		if len(config.Paths) != 1 || config.Paths[0] != "Dockerfile" {
-			t.Fatalf("unexpected paths: %+v", config.Paths)
-		}
-		if config.Options.Mode != pouch.ModeFile {
-			t.Fatalf("config.Options.Mode = %v, want %v", config.Options.Mode, pouch.ModeFile)
-		}
-	})
-
-	t.Run("parses file mode flag", func(t *testing.T) {
-		t.Parallel()
-		var stdout bytes.Buffer
-		var stderr bytes.Buffer
-
-		config, err := Parse([]string{"Dockerfile", "--file"}, &stdout, &stderr)
-		if err != nil {
-			t.Fatalf("Parse() error = %v", err)
-		}
-		if len(config.Paths) != 1 || config.Paths[0] != "Dockerfile" {
-			t.Fatalf("unexpected paths: %+v", config.Paths)
-		}
-		if config.Options.Mode != pouch.ModeFile {
-			t.Fatalf("config.Options.Mode = %v, want %v", config.Options.Mode, pouch.ModeFile)
-		}
-	})
-
-	t.Run("parses dir mode flag", func(t *testing.T) {
-		t.Parallel()
-		var stdout bytes.Buffer
-		var stderr bytes.Buffer
-
-		config, err := Parse([]string{"dir.with.dot", "--dir"}, &stdout, &stderr)
-		if err != nil {
-			t.Fatalf("Parse() error = %v", err)
-		}
-		if len(config.Paths) != 1 || config.Paths[0] != "dir.with.dot" {
-			t.Fatalf("unexpected paths: %+v", config.Paths)
-		}
-		if config.Options.Mode != pouch.ModeDir {
-			t.Fatalf("config.Options.Mode = %v, want %v", config.Options.Mode, pouch.ModeDir)
-		}
-	})
-
-	t.Run("parses strict flag", func(t *testing.T) {
-		t.Parallel()
-		var stdout bytes.Buffer
-		var stderr bytes.Buffer
-
-		config, err := Parse([]string{"sample", "--strict"}, &stdout, &stderr)
-		if err != nil {
-			t.Fatalf("Parse() error = %v", err)
-		}
-		if !config.Options.Strict {
-			t.Fatalf("config.Options.Strict = %v, want true", config.Options.Strict)
-		}
-	})
-
-	t.Run("treats arguments after double dash as paths", func(t *testing.T) {
-		t.Parallel()
-		var stdout bytes.Buffer
-		var stderr bytes.Buffer
-
-		config, err := Parse([]string{"--dry-run", "--", "--dry-run"}, &stdout, &stderr)
-		if err != nil {
-			t.Fatalf("Parse() error = %v", err)
-		}
-		if len(config.Paths) != 1 || config.Paths[0] != "--dry-run" {
-			t.Fatalf("unexpected paths: %+v", config.Paths)
-		}
-		if !config.Options.DryRun {
-			t.Fatalf("config.Options.DryRun = %v, want true", config.Options.DryRun)
-		}
-	})
-
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			config, stdout, stderr := parseForTest(t, tt.args)
+			tt.verify(t, config, stdout, stderr)
+		})
+	}
 }
 
 func TestParseErrors(t *testing.T) {
@@ -258,4 +220,64 @@ func TestParseSpecialFlags(t *testing.T) {
 			t.Fatalf("config.Paths = %+v, want empty", config.Paths)
 		}
 	})
+}
+
+func parseForTest(t *testing.T, args []string) (Config, string, string) {
+	t.Helper()
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+
+	config, err := Parse(args, &stdout, &stderr)
+	if err != nil {
+		t.Fatalf("Parse() error = %v", err)
+	}
+
+	return config, stdout.String(), stderr.String()
+}
+
+func assertPaths(t *testing.T, got []string, want ...string) {
+	t.Helper()
+	if len(got) != len(want) {
+		t.Fatalf("len(paths) = %d, want %d (%+v)", len(got), len(want), got)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("paths[%d] = %q, want %q (%+v)", i, got[i], want[i], got)
+		}
+	}
+}
+
+func assertMode(t *testing.T, config Config, want pouch.Mode) {
+	t.Helper()
+	if config.Options.Mode != want {
+		t.Fatalf("config.Options.Mode = %v, want %v", config.Options.Mode, want)
+	}
+}
+
+func assertDryRun(t *testing.T, config Config, want bool) {
+	t.Helper()
+	if config.Options.DryRun != want {
+		t.Fatalf("config.Options.DryRun = %v, want %v", config.Options.DryRun, want)
+	}
+}
+
+func assertStrict(t *testing.T, config Config, want bool) {
+	t.Helper()
+	if config.Options.Strict != want {
+		t.Fatalf("config.Options.Strict = %v, want %v", config.Options.Strict, want)
+	}
+}
+
+func assertVerbose(t *testing.T, config Config, want bool) {
+	t.Helper()
+	if config.Verbose != want {
+		t.Fatalf("config.Verbose = %v, want %v", config.Verbose, want)
+	}
+}
+
+func assertOutputEmpty(t *testing.T, stdout, stderr string) {
+	t.Helper()
+	if stdout != "" || stderr != "" {
+		t.Fatalf("unexpected output: stdout=%q stderr=%q", stdout, stderr)
+	}
 }
