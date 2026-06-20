@@ -136,6 +136,8 @@ pouch Dockerfile --file
 pouch dir.with.dot --dir
 ```
 
+Mode flags apply to the whole command. For example, `pouch Dockerfile test --file` treats both `Dockerfile` and `test` as files.
+
 `--mode file` and `--mode dir` remain available. Do not combine `--mode` with `--file` or `--dir` in the same command.
 
 If a path ends with `/`, file mode returns an error instead of creating a file.

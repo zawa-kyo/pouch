@@ -135,6 +135,8 @@ pouch Dockerfile --file
 pouch dir.with.dot --dir
 ```
 
+モード指定はコマンド全体に効きます。たとえば `pouch Dockerfile test --file` は、`Dockerfile` と `test` の両方をファイルとして扱います。
+
 `--mode file` と `--mode dir` も引き続き使えます。同じコマンド内で `--mode` と `--file` または `--dir` は併用しないでください。
 
 パスが `/` で終わっている場合、file モードはファイルを作らずエラーにします。

@@ -84,7 +84,8 @@
 - Cover observable behavior rather than implementation trivia.
 - Keep coverage aligned with the current public behavior in the README, including:
   - auto detection
-  - explicit mode overrides
+  - explicit mode overrides with `--file`, `--dir`, and `--mode`
+  - conflicts between `--mode` and the mode shortcut flags
   - parent directory creation
   - dry-run behavior
   - strict behavior for existing paths
