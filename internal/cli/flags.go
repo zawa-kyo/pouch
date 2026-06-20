@@ -71,26 +71,14 @@ func newFlagSet(stdout, stderr io.Writer) (*flag.FlagSet, flagValues) {
 	fs := flag.NewFlagSet("pouch", flag.ContinueOnError)
 	fs.SetOutput(stderr)
 
-	mode := fs.String("mode", "auto", "")
-	fs.StringVar(mode, "m", "auto", "")
-
+	mode := registerStringFlag(fs, "mode", "m", "auto")
 	fileMode := fs.Bool("file", false, "")
 	dirMode := fs.Bool("dir", false, "")
-
-	dryRun := fs.Bool("dry-run", false, "")
-	fs.BoolVar(dryRun, "n", false, "")
-
-	strict := fs.Bool("strict", false, "")
-	fs.BoolVar(strict, "s", false, "")
-
-	verbose := fs.Bool("verbose", false, "")
-	fs.BoolVar(verbose, "V", false, "")
-
-	help := fs.Bool("help", false, "")
-	fs.BoolVar(help, "h", false, "")
-
-	showVersion := fs.Bool("version", false, "")
-	fs.BoolVar(showVersion, "v", false, "")
+	dryRun := registerBoolFlag(fs, "dry-run", "n")
+	strict := registerBoolFlag(fs, "strict", "s")
+	verbose := registerBoolFlag(fs, "verbose", "V")
+	help := registerBoolFlag(fs, "help", "h")
+	showVersion := registerBoolFlag(fs, "version", "v")
 
 	fs.Usage = func() { writeUsage(stderr) }
 
@@ -104,6 +92,18 @@ func newFlagSet(stdout, stderr io.Writer) (*flag.FlagSet, flagValues) {
 		help:        help,
 		showVersion: showVersion,
 	}
+}
+
+func registerBoolFlag(fs *flag.FlagSet, name, short string) *bool {
+	value := fs.Bool(name, false, "")
+	fs.BoolVar(value, short, false, "")
+	return value
+}
+
+func registerStringFlag(fs *flag.FlagSet, name, short, defaultValue string) *string {
+	value := fs.String(name, defaultValue, "")
+	fs.StringVar(value, short, defaultValue, "")
+	return value
 }
 
 func handleSpecialFlags(values flagValues, stdout io.Writer) (bool, Config) {
