@@ -72,19 +72,15 @@ func handleExisting(path string, info os.FileInfo, kind Kind, result Result, opt
 
 func createFile(path string, opts Options, result Result) (Result, error) {
 	parent := filepath.Dir(path)
-	if parent != "." && parent != path {
-		if opts.DryRun {
-			result.Action = ActionCreateFile
-			return result, nil
-		}
-		if err := os.MkdirAll(parent, opts.DirPerm); err != nil {
-			return Result{}, fmt.Errorf("create parent directory for %q: %w", path, err)
-		}
-	}
-
 	if opts.DryRun {
 		result.Action = ActionCreateFile
 		return result, nil
+	}
+
+	if parent != "." && parent != path {
+		if err := os.MkdirAll(parent, opts.DirPerm); err != nil {
+			return Result{}, fmt.Errorf("create parent directory for %q: %w", path, err)
+		}
 	}
 
 	file, err := os.OpenFile(path, os.O_CREATE|os.O_EXCL|os.O_WRONLY, opts.FilePerm)
