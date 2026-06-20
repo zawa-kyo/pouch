@@ -114,29 +114,33 @@ Auto mode first checks whether the path ends with `/`. If it does not, it looks 
 > [!NOTE]
 > `pouch` keeps this rule intentionally small. It does not infer intent from well-known filenames or MIME types. A trailing slash is the only explicit directory hint in auto mode.
 
-When that rule matches your intent, auto mode is enough. When it does not, use `--mode` to be explicit.
+When that rule matches your intent, auto mode is enough. When it does not, use `--file`, `--dir`, or `--mode` to be explicit.
 
-## When to use `--mode`
+## When to choose file or directory mode
 
 Some names are ambiguous under the auto rule:
 
 | Path           | Auto mode result | Common override |
 | -------------- | ---------------- | --------------- |
-| `Dockerfile`   | Directory        | `--mode file`   |
-| `Makefile`     | Directory        | `--mode file`   |
-| `dir.with.dot` | File             | `--mode dir`    |
+| `Dockerfile`   | Directory        | `--file`        |
+| `Makefile`     | Directory        | `--file`        |
+| `dir.with.dot` | File             | `--dir`         |
 
 > [!IMPORTANT]
-> `Dockerfile` and `Makefile` are treated as directories in auto mode. Use `--mode file` when you want file creation semantics.
+> `Dockerfile` and `Makefile` are treated as directories in auto mode. Use `--file` when you want file creation semantics.
 
-Use `--mode` when you want a different result:
+Use `--file` or `--dir` when you want a different result:
 
 ```sh
-pouch Dockerfile --mode file
-pouch dir.with.dot --mode dir
+pouch Dockerfile --file
+pouch dir.with.dot --dir
 ```
 
-If a path ends with `/`, `--mode file` returns an error instead of creating a file.
+Mode flags apply to the whole command. For example, `pouch Dockerfile test --file` treats both `Dockerfile` and `test` as files.
+
+`--mode file` and `--mode dir` remain available. Do not combine `--mode` with `--file` or `--dir` in the same command.
+
+If a path ends with `/`, file mode returns an error instead of creating a file.
 
 ## When to use `--strict`
 
@@ -173,6 +177,8 @@ Flags can appear before or after `PATH...`. Use `--` if a path itself starts wit
 | Flag                             | Meaning                                               |
 | -------------------------------- | ----------------------------------------------------- |
 | `-h`, `--help`                   | Show help                                             |
+| `--file`                         | Treat each path as a file                             |
+| `--dir`                          | Treat each path as a directory                        |
 | `-m`, `--mode <auto\|file\|dir>` | Force file or directory mode                          |
 | `-n`, `--dry-run`                | Print planned actions without changing the filesystem |
 | `-s`, `--strict`                 | Fail if a target already exists                       |
@@ -192,6 +198,6 @@ Flags can appear before or after `PATH...`. Use `--` if a path itself starts wit
 
 - Platform: focus on macOS and Linux.
 - Responsibility: turn CLI paths into files or directories. It does not define project structure or file contents.
-- Detection: use one small auto detection rule set, with `--mode` when explicit control matters.
+- Detection: use one small auto detection rule set, with `--file`, `--dir`, or `--mode` when explicit control matters.
 - UX: keep each invocation predictable and non-interactive.
 - Configuration: keep behavior local to each command instead of relying on config files.
