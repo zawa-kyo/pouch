@@ -132,8 +132,8 @@ Some names are ambiguous under the auto rule:
 Use `--mode` when you want a different result:
 
 ```sh
-pouch --mode file Dockerfile
-pouch --mode dir dir.with.dot
+pouch Dockerfile --mode file
+pouch dir.with.dot --mode dir
 ```
 
 If a path ends with `/`, `--mode file` returns an error instead of creating a file.
@@ -145,7 +145,7 @@ By default, `pouch` is safe to run again. If the target already exists with the 
 Use `--strict` when an existing target should fail instead:
 
 ```sh
-pouch --strict src/main.go test
+pouch src/main.go test --strict
 ```
 
 ## Behavior

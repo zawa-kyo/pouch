@@ -131,8 +131,8 @@ auto ルールでは、判定が分かれやすい名前もあります。
 別の結果にしたい場合は `--mode` を使います。
 
 ```sh
-pouch --mode file Dockerfile
-pouch --mode dir dir.with.dot
+pouch Dockerfile --mode file
+pouch dir.with.dot --mode dir
 ```
 
 パスが `/` で終わっている場合、`--mode file` はファイルを作らずエラーにします。
@@ -144,7 +144,7 @@ pouch --mode dir dir.with.dot
 既存パスを失敗扱いにしたい場合は、`--strict` を使います。
 
 ```sh
-pouch --strict src/main.go test
+pouch src/main.go test --strict
 ```
 
 ## 振る舞い
