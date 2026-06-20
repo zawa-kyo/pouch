@@ -26,6 +26,9 @@ func Parse(args []string, stdout, stderr io.Writer) (Config, error) {
 	mode := fs.String("mode", "auto", "")
 	fs.StringVar(mode, "m", "auto", "")
 
+	fileMode := fs.Bool("file", false, "")
+	dirMode := fs.Bool("dir", false, "")
+
 	dryRun := fs.Bool("dry-run", false, "")
 	fs.BoolVar(dryRun, "n", false, "")
 
@@ -61,6 +64,20 @@ func Parse(args []string, stdout, stderr io.Writer) (Config, error) {
 		return Config{ShowVersion: true}, nil
 	}
 
+	modeFlagSet := false
+	fs.Visit(func(f *flag.Flag) {
+		if f.Name == "mode" || f.Name == "m" {
+			modeFlagSet = true
+		}
+	})
+
+	if *fileMode && *dirMode {
+		return Config{}, errors.New("--file and --dir cannot be used together")
+	}
+	if modeFlagSet && (*fileMode || *dirMode) {
+		return Config{}, errors.New("--mode cannot be used with --file or --dir")
+	}
+
 	if len(paths) == 0 {
 		return Config{}, errors.New("PATH... is required")
 	}
@@ -68,6 +85,12 @@ func Parse(args []string, stdout, stderr io.Writer) (Config, error) {
 	parsedMode, err := parseMode(*mode)
 	if err != nil {
 		return Config{}, err
+	}
+	if *fileMode {
+		parsedMode = pouch.ModeFile
+	}
+	if *dirMode {
+		parsedMode = pouch.ModeDir
 	}
 
 	return Config{
@@ -116,7 +139,7 @@ func splitArgs(args []string) ([]string, []string, error) {
 
 func isBoolFlag(arg string) bool {
 	switch arg {
-	case "--dry-run", "-n", "--strict", "-s", "--verbose", "-V", "--help", "-h", "--version", "-v":
+	case "--file", "--dir", "--dry-run", "-n", "--strict", "-s", "--verbose", "-V", "--help", "-h", "--version", "-v":
 		return true
 	default:
 		return false
@@ -137,6 +160,10 @@ func writeUsage(w io.Writer) {
 	fmt.Fprintln(w, "Flags:")
 	fmt.Fprintln(w, "  -h, --help")
 	fmt.Fprintln(w, "      Show help.")
+	fmt.Fprintln(w, "  --file")
+	fmt.Fprintln(w, "      Use file mode.")
+	fmt.Fprintln(w, "  --dir")
+	fmt.Fprintln(w, "      Use directory mode.")
 	fmt.Fprintln(w, "  -m, --mode auto|file|dir")
 	fmt.Fprintln(w, "      Force file or directory mode.")
 	fmt.Fprintln(w, "  -n, --dry-run")
