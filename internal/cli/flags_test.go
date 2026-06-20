@@ -44,6 +44,14 @@ func TestParseSuccess(t *testing.T) {
 			},
 		},
 		{
+			name: "parses trailing inline mode flag after path",
+			args: []string{"Dockerfile", "--mode=file"},
+			verify: func(t *testing.T, config Config, _, _ string) {
+				assertPaths(t, config.Paths, "Dockerfile")
+				assertMode(t, config, pouch.ModeFile)
+			},
+		},
+		{
 			name: "parses file mode flag",
 			args: []string{"Dockerfile", "--file"},
 			verify: func(t *testing.T, config Config, _, _ string) {

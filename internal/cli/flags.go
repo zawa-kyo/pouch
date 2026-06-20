@@ -29,14 +29,29 @@ type flagValues struct {
 	showVersion *bool
 }
 
+type splitResult struct {
+	flagArgs     []string
+	paths        []string
+	explicitMode bool
+}
+
+type flagKind int
+
+const (
+	flagKindUnknown flagKind = iota
+	flagKindBool
+	flagKindMode
+	flagKindInlineMode
+)
+
 // Parse converts CLI arguments into a validated Config.
 func Parse(args []string, stdout, stderr io.Writer) (Config, error) {
 	fs, values := newFlagSet(stdout, stderr)
-	flagArgs, paths, err := splitArgs(args)
+	split, err := splitArgs(args)
 	if err != nil {
 		return Config{}, err
 	}
-	if err := fs.Parse(flagArgs); err != nil {
+	if err := fs.Parse(split.flagArgs); err != nil {
 		return Config{}, err
 	}
 	if handled, config := handleSpecialFlags(values, stdout); handled {
@@ -45,19 +60,19 @@ func Parse(args []string, stdout, stderr io.Writer) (Config, error) {
 	if *values.showVersion {
 		return Config{ShowVersion: true}, nil
 	}
-	if err := validateFlags(fs, values); err != nil {
+	if err := validateFlags(values, split.explicitMode); err != nil {
 		return Config{}, err
 	}
-	if err := validatePaths(paths); err != nil {
+	if err := validatePaths(split.paths); err != nil {
 		return Config{}, err
 	}
-	parsedMode, err := resolveMode(fs, values)
+	parsedMode, err := resolveMode(values, split.explicitMode)
 	if err != nil {
 		return Config{}, err
 	}
 
 	return Config{
-		Paths: paths,
+		Paths: split.paths,
 		Options: pouch.Options{
 			Mode:   parsedMode,
 			DryRun: *values.dryRun,
@@ -115,25 +130,14 @@ func handleSpecialFlags(values flagValues, stdout io.Writer) (bool, Config) {
 	return true, Config{}
 }
 
-func validateFlags(fs *flag.FlagSet, values flagValues) error {
-	modeFlagSet := hasModeFlag(fs)
+func validateFlags(values flagValues, explicitMode bool) error {
 	if *values.fileMode && *values.dirMode {
 		return errors.New("--file and --dir cannot be used together")
 	}
-	if modeFlagSet && (*values.fileMode || *values.dirMode) {
+	if explicitMode && (*values.fileMode || *values.dirMode) {
 		return errors.New("--mode cannot be used with --file or --dir")
 	}
 	return nil
-}
-
-func hasModeFlag(fs *flag.FlagSet) bool {
-	modeFlagSet := false
-	fs.Visit(func(f *flag.Flag) {
-		if f.Name == "mode" || f.Name == "m" {
-			modeFlagSet = true
-		}
-	})
-	return modeFlagSet
 }
 
 func validatePaths(paths []string) error {
@@ -143,12 +147,12 @@ func validatePaths(paths []string) error {
 	return nil
 }
 
-func resolveMode(fs *flag.FlagSet, values flagValues) (pouch.Mode, error) {
+func resolveMode(values flagValues, explicitMode bool) (pouch.Mode, error) {
 	parsedMode, err := parseMode(*values.mode)
 	if err != nil {
 		return parsedMode, err
 	}
-	if !hasModeFlag(fs) {
+	if !explicitMode {
 		if *values.fileMode {
 			return pouch.ModeFile, nil
 		}
@@ -159,54 +163,57 @@ func resolveMode(fs *flag.FlagSet, values flagValues) (pouch.Mode, error) {
 	return parsedMode, nil
 }
 
-func splitArgs(args []string) ([]string, []string, error) {
-	flagArgs := make([]string, 0, len(args))
-	paths := make([]string, 0, len(args))
+func splitArgs(args []string) (splitResult, error) {
+	result := splitResult{
+		flagArgs: make([]string, 0, len(args)),
+		paths:    make([]string, 0, len(args)),
+	}
 
 	for i := 0; i < len(args); i++ {
 		arg := args[i]
 		if arg == "--" {
-			paths = append(paths, args[i+1:]...)
-			return flagArgs, paths, nil
+			result.paths = append(result.paths, args[i+1:]...)
+			return result, nil
 		}
 
 		if !strings.HasPrefix(arg, "-") || arg == "-" {
-			paths = append(paths, arg)
+			result.paths = append(result.paths, arg)
 			continue
 		}
 
-		switch {
-		case isBoolFlag(arg), isInlineModeFlag(arg):
-			flagArgs = append(flagArgs, arg)
-		case isModeFlag(arg):
+		switch classifyFlag(arg) {
+		case flagKindBool:
+			result.flagArgs = append(result.flagArgs, arg)
+		case flagKindInlineMode:
+			result.flagArgs = append(result.flagArgs, arg)
+			result.explicitMode = true
+		case flagKindMode:
 			if i+1 >= len(args) {
-				return nil, nil, fmt.Errorf("flag needs an argument: %s", arg)
+				return splitResult{}, fmt.Errorf("flag needs an argument: %s", arg)
 			}
-			flagArgs = append(flagArgs, arg, args[i+1])
+			result.flagArgs = append(result.flagArgs, arg, args[i+1])
+			result.explicitMode = true
 			i++
 		default:
-			flagArgs = append(flagArgs, arg)
+			result.flagArgs = append(result.flagArgs, arg)
 		}
 	}
 
-	return flagArgs, paths, nil
+	return result, nil
 }
 
-func isBoolFlag(arg string) bool {
+func classifyFlag(arg string) flagKind {
 	switch arg {
 	case "--file", "--dir", "--dry-run", "-n", "--strict", "-s", "--verbose", "-V", "--help", "-h", "--version", "-v":
-		return true
+		return flagKindBool
+	case "--mode", "-m":
+		return flagKindMode
 	default:
-		return false
+		if strings.HasPrefix(arg, "--mode=") || strings.HasPrefix(arg, "-m=") {
+			return flagKindInlineMode
+		}
+		return flagKindUnknown
 	}
-}
-
-func isModeFlag(arg string) bool {
-	return arg == "--mode" || arg == "-m"
-}
-
-func isInlineModeFlag(arg string) bool {
-	return strings.HasPrefix(arg, "--mode=") || strings.HasPrefix(arg, "-m=")
 }
 
 func writeUsage(w io.Writer) {
