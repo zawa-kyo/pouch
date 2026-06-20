@@ -17,7 +17,19 @@
 `pouch` creates files and directories from path-like CLI arguments.
 It creates missing paths and leaves existing files unchanged.
 
-It uses one small rule set in auto mode:
+It is for the moment when you already know the path you want, but you do not want to stop and spell out whether this one needs `mkdir -p`, `touch`, or both.
+
+## Why pouch
+
+Creating paths often means switching between commands:
+
+```sh
+mkdir -p notes
+mkdir -p src && touch src/main.go
+```
+
+The name `pouch` comes from that muscle memory: `mkdir -p` for directories, `touch` for files.
+`pouch` folds those two habits into one small command. You pass a path, and it follows one simple rule set to do the obvious thing:
 
 | Path shape                 | Result               |
 | -------------------------- | -------------------- |
@@ -25,7 +37,7 @@ It uses one small rule set in auto mode:
 | Final segment contains `.` | Treat as a file      |
 | Otherwise                  | Treat as a directory |
 
-That rule lets you create common paths without stopping to choose between `mkdir -p` and `touch`.
+That rule is intentionally small. `pouch` is not a scaffolding tool; it just creates the path you asked for.
 
 ## Examples
 
@@ -78,20 +90,6 @@ Then install and activate it with:
 mise use -g pouch@latest
 ```
 
-## Why pouch
-
-Creating paths often means switching between commands:
-
-```sh
-mkdir -p notes
-mkdir -p src && touch src/main.go
-```
-
-The name `pouch` comes from that muscle memory: `mkdir -p` for directories, `touch` for files.
-`pouch` folds those two habits into one small command. You pass a path, and it follows one simple rule set to do the obvious thing.
-
-It is for the moment when you already know the path you want, but you do not want to stop and spell out whether this one needs `mkdir -p`, `touch`, or both.
-
 ## Compared with `mkdir -p` and `touch`
 
 `pouch` sits on top of a familiar idea rather than replacing an existing standard tool.
@@ -134,13 +132,21 @@ Some names are ambiguous under the auto rule:
 Use `--mode` when you want a different result:
 
 ```sh
-pouch --mode file Dockerfile
-pouch --mode dir dir.with.dot
+pouch Dockerfile --mode file
+pouch dir.with.dot --mode dir
 ```
 
 If a path ends with `/`, `--mode file` returns an error instead of creating a file.
 
-Use `--strict` when you want existing paths to fail instead of being treated as a successful no-op.
+## When to use `--strict`
+
+By default, `pouch` is safe to run again. If the target already exists with the expected kind, the command succeeds without changing it.
+
+Use `--strict` when an existing target should fail instead:
+
+```sh
+pouch src/main.go test --strict
+```
 
 ## Behavior
 
@@ -153,8 +159,6 @@ Use `--strict` when you want existing paths to fail instead of being treated as 
 | Directory   | Creates the directory with `mkdir -p` semantics            |
 | Directory   | Succeeds if the directory already exists                   |
 | Directory   | Returns an error if the path already exists as a file      |
-
-By default, `pouch` is idempotent: re-running the same command succeeds when the target already exists with the expected kind. Add `--strict` if you want that case to fail.
 
 ## CLI
 
