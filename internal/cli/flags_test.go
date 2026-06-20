@@ -65,6 +65,40 @@ func TestParseSuccess(t *testing.T) {
 		}
 	})
 
+	t.Run("parses file mode flag", func(t *testing.T) {
+		t.Parallel()
+		var stdout bytes.Buffer
+		var stderr bytes.Buffer
+
+		config, err := Parse([]string{"Dockerfile", "--file"}, &stdout, &stderr)
+		if err != nil {
+			t.Fatalf("Parse() error = %v", err)
+		}
+		if len(config.Paths) != 1 || config.Paths[0] != "Dockerfile" {
+			t.Fatalf("unexpected paths: %+v", config.Paths)
+		}
+		if config.Options.Mode != pouch.ModeFile {
+			t.Fatalf("config.Options.Mode = %v, want %v", config.Options.Mode, pouch.ModeFile)
+		}
+	})
+
+	t.Run("parses dir mode flag", func(t *testing.T) {
+		t.Parallel()
+		var stdout bytes.Buffer
+		var stderr bytes.Buffer
+
+		config, err := Parse([]string{"dir.with.dot", "--dir"}, &stdout, &stderr)
+		if err != nil {
+			t.Fatalf("Parse() error = %v", err)
+		}
+		if len(config.Paths) != 1 || config.Paths[0] != "dir.with.dot" {
+			t.Fatalf("unexpected paths: %+v", config.Paths)
+		}
+		if config.Options.Mode != pouch.ModeDir {
+			t.Fatalf("config.Options.Mode = %v, want %v", config.Options.Mode, pouch.ModeDir)
+		}
+	})
+
 	t.Run("parses strict flag", func(t *testing.T) {
 		t.Parallel()
 		var stdout bytes.Buffer
@@ -137,6 +171,39 @@ func TestParseErrors(t *testing.T) {
 		}
 		if stderr.Len() == 0 {
 			t.Fatal("stderr is empty, want parse error output")
+		}
+	})
+
+	t.Run("rejects file and dir together", func(t *testing.T) {
+		t.Parallel()
+		var stdout bytes.Buffer
+		var stderr bytes.Buffer
+
+		_, err := Parse([]string{"sample", "--file", "--dir"}, &stdout, &stderr)
+		if err == nil {
+			t.Fatal("expected error")
+		}
+	})
+
+	t.Run("rejects mode with file shortcut", func(t *testing.T) {
+		t.Parallel()
+		var stdout bytes.Buffer
+		var stderr bytes.Buffer
+
+		_, err := Parse([]string{"Dockerfile", "--mode", "auto", "--file"}, &stdout, &stderr)
+		if err == nil {
+			t.Fatal("expected error")
+		}
+	})
+
+	t.Run("rejects short mode with dir shortcut", func(t *testing.T) {
+		t.Parallel()
+		var stdout bytes.Buffer
+		var stderr bytes.Buffer
+
+		_, err := Parse([]string{"dir.with.dot", "-m", "file", "--dir"}, &stdout, &stderr)
+		if err == nil {
+			t.Fatal("expected error")
 		}
 	})
 }

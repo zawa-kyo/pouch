@@ -17,7 +17,19 @@
 `pouch` creates files and directories from path-like CLI arguments.
 It creates missing paths and leaves existing files unchanged.
 
-It uses one small rule set in auto mode:
+It is for the moment when you already know the path you want, but you do not want to stop and spell out whether this one needs `mkdir -p`, `touch`, or both.
+
+## Why pouch
+
+Creating paths often means switching between commands:
+
+```sh
+mkdir -p notes
+mkdir -p src && touch src/main.go
+```
+
+The name `pouch` comes from that muscle memory: `mkdir -p` for directories, `touch` for files.
+`pouch` folds those two habits into one small command. You pass a path, and it follows one simple rule set to do the obvious thing:
 
 | Path shape                 | Result               |
 | -------------------------- | -------------------- |
@@ -25,7 +37,7 @@ It uses one small rule set in auto mode:
 | Final segment contains `.` | Treat as a file      |
 | Otherwise                  | Treat as a directory |
 
-That rule lets you create common paths without stopping to choose between `mkdir -p` and `touch`.
+That rule is intentionally small. `pouch` is not a scaffolding tool; it just creates the path you asked for.
 
 ## Examples
 
@@ -78,20 +90,6 @@ Then install and activate it with:
 mise use -g pouch@latest
 ```
 
-## Why pouch
-
-Creating paths often means switching between commands:
-
-```sh
-mkdir -p notes
-mkdir -p src && touch src/main.go
-```
-
-The name `pouch` comes from that muscle memory: `mkdir -p` for directories, `touch` for files.
-`pouch` folds those two habits into one small command. You pass a path, and it follows one simple rule set to do the obvious thing.
-
-It is for the moment when you already know the path you want, but you do not want to stop and spell out whether this one needs `mkdir -p`, `touch`, or both.
-
 ## Compared with `mkdir -p` and `touch`
 
 `pouch` sits on top of a familiar idea rather than replacing an existing standard tool.
@@ -116,31 +114,43 @@ Auto mode first checks whether the path ends with `/`. If it does not, it looks 
 > [!NOTE]
 > `pouch` keeps this rule intentionally small. It does not infer intent from well-known filenames or MIME types. A trailing slash is the only explicit directory hint in auto mode.
 
-When that rule matches your intent, auto mode is enough. When it does not, use `--mode` to be explicit.
+When that rule matches your intent, auto mode is enough. When it does not, use `--file`, `--dir`, or `--mode` to be explicit.
 
-## When to use `--mode`
+## When to choose file or directory mode
 
 Some names are ambiguous under the auto rule:
 
 | Path           | Auto mode result | Common override |
 | -------------- | ---------------- | --------------- |
-| `Dockerfile`   | Directory        | `--mode file`   |
-| `Makefile`     | Directory        | `--mode file`   |
-| `dir.with.dot` | File             | `--mode dir`    |
+| `Dockerfile`   | Directory        | `--file`        |
+| `Makefile`     | Directory        | `--file`        |
+| `dir.with.dot` | File             | `--dir`         |
 
 > [!IMPORTANT]
-> `Dockerfile` and `Makefile` are treated as directories in auto mode. Use `--mode file` when you want file creation semantics.
+> `Dockerfile` and `Makefile` are treated as directories in auto mode. Use `--file` when you want file creation semantics.
 
-Use `--mode` when you want a different result:
+Use `--file` or `--dir` when you want a different result:
 
 ```sh
-pouch --mode file Dockerfile
-pouch --mode dir dir.with.dot
+pouch Dockerfile --file
+pouch dir.with.dot --dir
 ```
 
-If a path ends with `/`, `--mode file` returns an error instead of creating a file.
+Mode flags apply to the whole command. For example, `pouch Dockerfile test --file` treats both `Dockerfile` and `test` as files.
 
-Use `--strict` when you want existing paths to fail instead of being treated as a successful no-op.
+`--mode file` and `--mode dir` remain available. Do not combine `--mode` with `--file` or `--dir` in the same command.
+
+If a path ends with `/`, file mode returns an error instead of creating a file.
+
+## When to use `--strict`
+
+By default, `pouch` is safe to run again. If the target already exists with the expected kind, the command succeeds without changing it.
+
+Use `--strict` when an existing target should fail instead:
+
+```sh
+pouch src/main.go test --strict
+```
 
 ## Behavior
 
@@ -153,8 +163,6 @@ Use `--strict` when you want existing paths to fail instead of being treated as 
 | Directory   | Creates the directory with `mkdir -p` semantics            |
 | Directory   | Succeeds if the directory already exists                   |
 | Directory   | Returns an error if the path already exists as a file      |
-
-By default, `pouch` is idempotent: re-running the same command succeeds when the target already exists with the expected kind. Add `--strict` if you want that case to fail.
 
 ## CLI
 
@@ -169,6 +177,8 @@ Flags can appear before or after `PATH...`. Use `--` if a path itself starts wit
 | Flag                             | Meaning                                               |
 | -------------------------------- | ----------------------------------------------------- |
 | `-h`, `--help`                   | Show help                                             |
+| `--file`                         | Treat each path as a file                             |
+| `--dir`                          | Treat each path as a directory                        |
 | `-m`, `--mode <auto\|file\|dir>` | Force file or directory mode                          |
 | `-n`, `--dry-run`                | Print planned actions without changing the filesystem |
 | `-s`, `--strict`                 | Fail if a target already exists                       |
@@ -188,6 +198,6 @@ Flags can appear before or after `PATH...`. Use `--` if a path itself starts wit
 
 - Platform: focus on macOS and Linux.
 - Responsibility: turn CLI paths into files or directories. It does not define project structure or file contents.
-- Detection: use one small auto detection rule set, with `--mode` when explicit control matters.
+- Detection: use one small auto detection rule set, with `--file`, `--dir`, or `--mode` when explicit control matters.
 - UX: keep each invocation predictable and non-interactive.
 - Configuration: keep behavior local to each command instead of relying on config files.

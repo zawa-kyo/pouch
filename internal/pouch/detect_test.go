@@ -16,6 +16,7 @@ func TestDetect(t *testing.T) {
 		{path: "sample/", want: KindDir},
 		{path: "dir.with.dot/", want: KindDir},
 		{path: "Dockerfile", want: KindDir},
+		{path: "Makefile", want: KindDir},
 		{path: "dir.with.dot", want: KindFile},
 	}
 
