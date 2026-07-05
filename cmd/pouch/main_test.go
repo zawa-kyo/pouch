@@ -118,6 +118,24 @@ func TestRunVersionShortFlag(t *testing.T) {
 	}
 }
 
+func TestRunHelpWritesUsageToStdout(t *testing.T) {
+	t.Parallel()
+
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+
+	code := run([]string{"--help"}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("run() code = %d, want 0", code)
+	}
+	if !strings.Contains(stdout.String(), "Usage: pouch [flags] PATH...") {
+		t.Fatalf("stdout = %q, want usage", stdout.String())
+	}
+	if stderr.Len() != 0 {
+		t.Fatalf("stderr = %q, want empty", stderr.String())
+	}
+}
+
 func TestRunDryRunTrailingFlagDoesNotCreatePaths(t *testing.T) {
 	t.Parallel()
 
@@ -140,6 +158,25 @@ func TestRunDryRunTrailingFlagDoesNotCreatePaths(t *testing.T) {
 	if _, err := os.Stat(dirTarget); !os.IsNotExist(err) {
 		t.Fatalf("dirTarget exists after dry run, err = %v", err)
 	}
+}
+
+func TestRunDoubleDashTreatsFollowingFlagLikeArgumentAsPath(t *testing.T) {
+	root := t.TempDir()
+	t.Chdir(root)
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+
+	code := run([]string{"--", "--dry-run"}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("run() code = %d, want 0", code)
+	}
+	if stdout.Len() != 0 {
+		t.Fatalf("stdout = %q, want empty", stdout.String())
+	}
+	if stderr.Len() != 0 {
+		t.Fatalf("stderr = %q, want empty", stderr.String())
+	}
+	assertDir(t, filepath.Join(root, "--dry-run"))
 }
 
 func TestRunStrictFailsForExistingPath(t *testing.T) {
