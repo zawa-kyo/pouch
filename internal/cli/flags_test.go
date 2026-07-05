@@ -52,6 +52,14 @@ func TestParseSuccess(t *testing.T) {
 			},
 		},
 		{
+			name: "parses short mode flag",
+			args: []string{"Dockerfile", "-m", "file"},
+			verify: func(t *testing.T, config Config, _, _ string) {
+				assertPaths(t, config.Paths, "Dockerfile")
+				assertMode(t, config, pouch.ModeFile)
+			},
+		},
+		{
 			name: "parses file mode flag",
 			args: []string{"Dockerfile", "--file"},
 			verify: func(t *testing.T, config Config, _, _ string) {
@@ -70,6 +78,20 @@ func TestParseSuccess(t *testing.T) {
 		{
 			name: "parses strict flag",
 			args: []string{"sample", "--strict"},
+			verify: func(t *testing.T, config Config, _, _ string) {
+				assertStrict(t, config, true)
+			},
+		},
+		{
+			name: "parses short dry run flag",
+			args: []string{"sample", "-n"},
+			verify: func(t *testing.T, config Config, _, _ string) {
+				assertDryRun(t, config, true)
+			},
+		},
+		{
+			name: "parses short strict flag",
+			args: []string{"sample", "-s"},
 			verify: func(t *testing.T, config Config, _, _ string) {
 				assertStrict(t, config, true)
 			},
