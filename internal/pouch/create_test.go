@@ -56,12 +56,13 @@ func TestCreateAuto(t *testing.T) {
 			name: "skips existing file",
 			path: func(root string) string { return filepath.Join(root, "sample.ts") },
 			prepare: func(t *testing.T, path string) {
-				if err := os.WriteFile(path, []byte("x"), 0o644); err != nil {
+				if err := os.WriteFile(path, []byte("original"), 0o644); err != nil {
 					t.Fatal(err)
 				}
 			},
-			verify: func(t *testing.T, _ string, result Result) {
+			verify: func(t *testing.T, path string, result Result) {
 				assertResult(t, result, KindFile, ActionSkipExisting)
+				assertFileContent(t, path, "original")
 			},
 		},
 		{
@@ -268,10 +269,11 @@ func TestCreateMany(t *testing.T) {
 			t.Fatal(err)
 		}
 
+		later := filepath.Join(root, "later")
 		paths := []string{
 			filepath.Join(root, "ok.ts"),
 			conflict,
-			filepath.Join(root, "later"),
+			later,
 		}
 		results, err := CreateMany(paths, Options{Mode: ModeFile})
 		if err == nil {
@@ -282,6 +284,9 @@ func TestCreateMany(t *testing.T) {
 		}
 		if results[0].Action != ActionCreateFile {
 			t.Fatalf("unexpected partial result: %+v", results[0])
+		}
+		if _, err := os.Stat(later); !os.IsNotExist(err) {
+			t.Fatalf("later path exists after first error, err = %v", err)
 		}
 	})
 }
@@ -305,6 +310,17 @@ func assertDirExists(t *testing.T, path string) {
 	}
 	if !info.IsDir() {
 		t.Fatalf("%q is file, want directory", path)
+	}
+}
+
+func assertFileContent(t *testing.T, path, want string) {
+	t.Helper()
+	got, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("os.ReadFile(%q) error = %v", path, err)
+	}
+	if string(got) != want {
+		t.Fatalf("file content = %q, want %q", string(got), want)
 	}
 }
 
