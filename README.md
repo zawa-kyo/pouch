@@ -29,7 +29,7 @@ mkdir -p src && touch src/main.go
 ```
 
 The name `pouch` comes from that muscle memory: `mkdir -p` for directories, `touch` for files.
-`pouch` folds those two habits into one small command. You pass a path, and it follows one simple rule set to do the obvious thing:
+`pouch` folds those two habits into one small command. You pass a path, and it uses the following simple rule set to choose the action:
 
 | Path shape                 | Result               |
 | -------------------------- | -------------------- |
@@ -47,11 +47,11 @@ pouch bar/baz.go
 pouch src/main.go test
 ```
 
-| Command                  | Result                                      |
-| ------------------------ | ------------------------------------------- |
-| `pouch foo`              | Creates the `foo` directory                 |
-| `pouch bar/baz.go`       | Creates parent directories, then `baz.go`   |
-| `pouch src/main.go test` | Processes each path in input order          |
+| Command                  | Result                                    |
+| ------------------------ | ----------------------------------------- |
+| `pouch foo`              | Creates the `foo` directory               |
+| `pouch bar/baz.go`       | Creates parent directories, then `baz.go` |
+| `pouch src/main.go test` | Processes each path in input order        |
 
 In practice it looks like this:
 
@@ -118,13 +118,13 @@ When that rule matches your intent, auto mode is enough. When it does not, use `
 
 ## When to choose file or directory mode
 
-Some names are ambiguous under the auto rule:
+Some names do not carry enough intent for the auto rule:
 
-| Path           | Auto mode result | Common override |
-| -------------- | ---------------- | --------------- |
-| `Dockerfile`   | Directory        | `--file`        |
-| `Makefile`     | Directory        | `--file`        |
-| `dir.with.dot` | File             | `--dir`         |
+| Path           | Auto mode result | Common explicit flag |
+| -------------- | ---------------- | -------------------- |
+| `Dockerfile`   | Directory        | `--file`             |
+| `Makefile`     | Directory        | `--file`             |
+| `dir.with.dot` | File             | `--dir`              |
 
 > [!IMPORTANT]
 > `Dockerfile` and `Makefile` are treated as directories in auto mode. Use `--file` when you want file creation semantics.
@@ -146,7 +146,7 @@ If a path ends with `/`, file mode returns an error instead of creating a file.
 
 By default, `pouch` is safe to run again. If the target already exists with the expected kind, the command succeeds without changing it.
 
-Use `--strict` when an existing target should fail instead:
+Use `--strict` when the command should fail if the target already exists:
 
 ```sh
 pouch src/main.go test --strict
@@ -196,8 +196,8 @@ Flags can appear before or after `PATH...`. Use `--` if a path itself starts wit
 
 `pouch` is intentionally narrow.
 
-- Platform: focus on macOS and Linux.
+- Platform: macOS and Linux are the primary targets.
 - Responsibility: turn CLI paths into files or directories. It does not define project structure or file contents.
 - Detection: use one small auto detection rule set, with `--file`, `--dir`, or `--mode` when explicit control matters.
-- UX: keep each invocation predictable and non-interactive.
+- UX: keep the CLI predictable and non-interactive.
 - Configuration: keep behavior local to each command instead of relying on config files.
