@@ -2,28 +2,56 @@ package pouch
 
 import "testing"
 
-func TestDetect(t *testing.T) {
+func TestDetectClassifiesPathsByDocumentedAutoModeRules(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
+		name string
 		path string
 		want Kind
 	}{
-		{path: "sample", want: KindDir},
-		{path: "sample.ts", want: KindFile},
-		{path: "sample/temp.ts", want: KindFile},
-		{path: ".env", want: KindFile},
-		{path: "sample/", want: KindDir},
-		{path: "dir.with.dot/", want: KindDir},
-		{path: "Dockerfile", want: KindDir},
-		{path: "Makefile", want: KindDir},
-		{path: "dir.with.dot", want: KindFile},
+		{
+			name: "bare final segment is a directory",
+			path: "sample",
+			want: KindDir,
+		},
+		{
+			name: "dotted final segment is a file",
+			path: "sample.ts",
+			want: KindFile,
+		},
+		{
+			name: "only the final segment controls file detection",
+			path: "sample/temp.ts",
+			want: KindFile,
+		},
+		{
+			name: "dotfile is a file",
+			path: ".env",
+			want: KindFile,
+		},
+		{
+			name: "trailing slash is an explicit directory hint",
+			path: "dir.with.dot/",
+			want: KindDir,
+		},
+		{
+			name: "well-known extensionless filename remains a directory in auto mode",
+			path: "Dockerfile",
+			want: KindDir,
+		},
+		{
+			name: "dotted directory name needs an explicit override without trailing slash",
+			path: "dir.with.dot",
+			want: KindFile,
+		},
 	}
 
 	for _, tt := range tests {
 		tt := tt
-		t.Run(tt.path, func(t *testing.T) {
+		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
+
 			if got := Detect(tt.path); got != tt.want {
 				t.Fatalf("Detect(%q) = %v, want %v", tt.path, got, tt.want)
 			}
