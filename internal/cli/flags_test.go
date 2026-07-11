@@ -2,106 +2,110 @@ package cli
 
 import (
 	"bytes"
+	"errors"
 	"flag"
+	"strings"
 	"testing"
 
 	"github.com/zawa-kyo/pouch/internal/pouch"
 )
 
-func TestParseSuccess(t *testing.T) {
+func TestParseBuildsConfigFromInterspersedFlagsAndPaths(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name   string
-		args   []string
-		verify func(*testing.T, Config, string, string)
+		name string
+		args []string
+		want Config
 	}{
 		{
-			name: "parses flags and paths",
+			name: "path only uses auto mode",
+			args: []string{"sample"},
+			want: Config{
+				Paths:   []string{"sample"},
+				Options: pouch.Options{Mode: pouch.ModeAuto},
+			},
+		},
+		{
+			name: "flags before paths",
 			args: []string{"--mode", "file", "--dry-run", "--verbose", "Dockerfile"},
-			verify: func(t *testing.T, config Config, stdout, stderr string) {
-				assertPaths(t, config.Paths, "Dockerfile")
-				assertMode(t, config, pouch.ModeFile)
-				assertDryRun(t, config, true)
-				assertVerbose(t, config, true)
-				assertOutputEmpty(t, stdout, stderr)
+			want: Config{
+				Paths:   []string{"Dockerfile"},
+				Options: pouch.Options{Mode: pouch.ModeFile, DryRun: true},
+				Verbose: true,
 			},
 		},
 		{
-			name: "parses trailing boolean flag after paths",
+			name: "boolean flag after paths",
 			args: []string{"src/main.go", "test", "--dry-run"},
-			verify: func(t *testing.T, config Config, _, _ string) {
-				assertPaths(t, config.Paths, "src/main.go", "test")
-				assertDryRun(t, config, true)
+			want: Config{
+				Paths:   []string{"src/main.go", "test"},
+				Options: pouch.Options{Mode: pouch.ModeAuto, DryRun: true},
 			},
 		},
 		{
-			name: "parses trailing value flag after path",
+			name: "value flag after path",
 			args: []string{"Dockerfile", "--mode", "file"},
-			verify: func(t *testing.T, config Config, _, _ string) {
-				assertPaths(t, config.Paths, "Dockerfile")
-				assertMode(t, config, pouch.ModeFile)
+			want: Config{
+				Paths:   []string{"Dockerfile"},
+				Options: pouch.Options{Mode: pouch.ModeFile},
 			},
 		},
 		{
-			name: "parses trailing inline mode flag after path",
+			name: "long inline mode flag after path",
 			args: []string{"Dockerfile", "--mode=file"},
-			verify: func(t *testing.T, config Config, _, _ string) {
-				assertPaths(t, config.Paths, "Dockerfile")
-				assertMode(t, config, pouch.ModeFile)
+			want: Config{
+				Paths:   []string{"Dockerfile"},
+				Options: pouch.Options{Mode: pouch.ModeFile},
 			},
 		},
 		{
-			name: "parses short mode flag",
-			args: []string{"Dockerfile", "-m", "file"},
-			verify: func(t *testing.T, config Config, _, _ string) {
-				assertPaths(t, config.Paths, "Dockerfile")
-				assertMode(t, config, pouch.ModeFile)
+			name: "short inline mode flag after path",
+			args: []string{"Dockerfile", "-m=file"},
+			want: Config{
+				Paths:   []string{"Dockerfile"},
+				Options: pouch.Options{Mode: pouch.ModeFile},
 			},
 		},
 		{
-			name: "parses file mode flag",
-			args: []string{"Dockerfile", "--file"},
-			verify: func(t *testing.T, config Config, _, _ string) {
-				assertPaths(t, config.Paths, "Dockerfile")
-				assertMode(t, config, pouch.ModeFile)
+			name: "file shortcut applies to all paths",
+			args: []string{"Dockerfile", "test", "--file"},
+			want: Config{
+				Paths:   []string{"Dockerfile", "test"},
+				Options: pouch.Options{Mode: pouch.ModeFile},
 			},
 		},
 		{
-			name: "parses dir mode flag",
+			name: "directory shortcut applies to all paths",
 			args: []string{"dir.with.dot", "--dir"},
-			verify: func(t *testing.T, config Config, _, _ string) {
-				assertPaths(t, config.Paths, "dir.with.dot")
-				assertMode(t, config, pouch.ModeDir)
+			want: Config{
+				Paths:   []string{"dir.with.dot"},
+				Options: pouch.Options{Mode: pouch.ModeDir},
 			},
 		},
 		{
-			name: "parses strict flag",
-			args: []string{"sample", "--strict"},
-			verify: func(t *testing.T, config Config, _, _ string) {
-				assertStrict(t, config, true)
+			name: "short flags set dry-run strict and verbose",
+			args: []string{"sample", "-n", "-s", "-V"},
+			want: Config{
+				Paths:   []string{"sample"},
+				Options: pouch.Options{Mode: pouch.ModeAuto, DryRun: true, Strict: true},
+				Verbose: true,
 			},
 		},
 		{
-			name: "parses short dry run flag",
-			args: []string{"sample", "-n"},
-			verify: func(t *testing.T, config Config, _, _ string) {
-				assertDryRun(t, config, true)
+			name: "double dash keeps later flag-shaped values as paths",
+			args: []string{"--dry-run", "--", "--dry-run", "-n"},
+			want: Config{
+				Paths:   []string{"--dry-run", "-n"},
+				Options: pouch.Options{Mode: pouch.ModeAuto, DryRun: true},
 			},
 		},
 		{
-			name: "parses short strict flag",
-			args: []string{"sample", "-s"},
-			verify: func(t *testing.T, config Config, _, _ string) {
-				assertStrict(t, config, true)
-			},
-		},
-		{
-			name: "treats arguments after double dash as paths",
-			args: []string{"--dry-run", "--", "--dry-run"},
-			verify: func(t *testing.T, config Config, _, _ string) {
-				assertPaths(t, config.Paths, "--dry-run")
-				assertDryRun(t, config, true)
+			name: "single dash is a path value",
+			args: []string{"-"},
+			want: Config{
+				Paths:   []string{"-"},
+				Options: pouch.Options{Mode: pouch.ModeAuto},
 			},
 		},
 	}
@@ -110,196 +114,167 @@ func TestParseSuccess(t *testing.T) {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			config, stdout, stderr := parseForTest(t, tt.args)
-			tt.verify(t, config, stdout, stderr)
+
+			config, stdout, stderr, err := parseForTest(tt.args)
+
+			if err != nil {
+				t.Fatalf("Parse() error = %v", err)
+			}
+			assertConfig(t, config, tt.want)
+			assertOutput(t, stdout, "")
+			assertOutput(t, stderr, "")
 		})
 	}
 }
 
-func TestParseErrors(t *testing.T) {
+func TestParseRejectsInvalidInvocations(t *testing.T) {
 	t.Parallel()
 
-	t.Run("requires path", func(t *testing.T) {
-		t.Parallel()
-		var stdout bytes.Buffer
-		var stderr bytes.Buffer
+	tests := []struct {
+		name       string
+		args       []string
+		wantErr    string
+		wantStderr string
+	}{
+		{
+			name:    "path is required unless a special flag handles the invocation",
+			args:    []string{"--mode", "auto"},
+			wantErr: "PATH... is required",
+		},
+		{
+			name:    "mode value must be one of the documented values",
+			args:    []string{"sample", "--mode", "weird"},
+			wantErr: `invalid mode "weird": must be auto, file, or dir`,
+		},
+		{
+			name:    "mode flag requires a value",
+			args:    []string{"sample", "--mode"},
+			wantErr: "flag needs an argument: --mode",
+		},
+		{
+			name:    "file and directory shortcuts conflict",
+			args:    []string{"sample", "--file", "--dir"},
+			wantErr: "--file and --dir cannot be used together",
+		},
+		{
+			name:    "explicit mode conflicts with file shortcut",
+			args:    []string{"Dockerfile", "--mode", "auto", "--file"},
+			wantErr: "--mode cannot be used with --file or --dir",
+		},
+		{
+			name:    "explicit mode conflicts with directory shortcut",
+			args:    []string{"dir.with.dot", "-m", "file", "--dir"},
+			wantErr: "--mode cannot be used with --file or --dir",
+		},
+		{
+			name:       "unknown flag is reported by the flag parser",
+			args:       []string{"--unknown"},
+			wantErr:    "flag provided but not defined",
+			wantStderr: "flag provided but not defined",
+		},
+	}
 
-		_, err := Parse([]string{"--mode", "auto"}, &stdout, &stderr)
-		if err == nil {
-			t.Fatal("expected error")
-		}
-	})
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 
-	t.Run("rejects invalid mode", func(t *testing.T) {
-		t.Parallel()
-		var stdout bytes.Buffer
-		var stderr bytes.Buffer
+			_, stdout, stderr, err := parseForTest(tt.args)
 
-		_, err := Parse([]string{"--mode", "weird", "sample"}, &stdout, &stderr)
-		if err == nil {
-			t.Fatal("expected error")
-		}
-	})
-
-	t.Run("writes flag parse errors to stderr", func(t *testing.T) {
-		t.Parallel()
-		var stdout bytes.Buffer
-		var stderr bytes.Buffer
-
-		_, err := Parse([]string{"--unknown"}, &stdout, &stderr)
-		if err == nil {
-			t.Fatal("expected error")
-		}
-		if stdout.Len() != 0 {
-			t.Fatalf("stdout = %q, want empty", stdout.String())
-		}
-		if stderr.Len() == 0 {
-			t.Fatal("stderr is empty, want parse error output")
-		}
-	})
-
-	t.Run("rejects file and dir together", func(t *testing.T) {
-		t.Parallel()
-		var stdout bytes.Buffer
-		var stderr bytes.Buffer
-
-		_, err := Parse([]string{"sample", "--file", "--dir"}, &stdout, &stderr)
-		if err == nil {
-			t.Fatal("expected error")
-		}
-	})
-
-	t.Run("rejects mode with file shortcut", func(t *testing.T) {
-		t.Parallel()
-		var stdout bytes.Buffer
-		var stderr bytes.Buffer
-
-		_, err := Parse([]string{"Dockerfile", "--mode", "auto", "--file"}, &stdout, &stderr)
-		if err == nil {
-			t.Fatal("expected error")
-		}
-	})
-
-	t.Run("rejects short mode with dir shortcut", func(t *testing.T) {
-		t.Parallel()
-		var stdout bytes.Buffer
-		var stderr bytes.Buffer
-
-		_, err := Parse([]string{"dir.with.dot", "-m", "file", "--dir"}, &stdout, &stderr)
-		if err == nil {
-			t.Fatal("expected error")
-		}
-	})
+			assertErrorContains(t, err, tt.wantErr)
+			assertOutput(t, stdout, "")
+			if tt.wantStderr != "" {
+				assertStringContains(t, stderr, tt.wantStderr)
+			} else {
+				assertOutput(t, stderr, "")
+			}
+		})
+	}
 }
 
-func TestParseSpecialFlags(t *testing.T) {
+func TestParseHandlesSpecialFlagsBeforePathValidation(t *testing.T) {
 	t.Parallel()
 
-	t.Run("writes help to stdout", func(t *testing.T) {
+	t.Run("help writes usage to stdout", func(t *testing.T) {
 		t.Parallel()
-		var stdout bytes.Buffer
-		var stderr bytes.Buffer
 
-		_, err := Parse([]string{"--help"}, &stdout, &stderr)
-		if err != flag.ErrHelp {
+		config, stdout, stderr, err := parseForTest([]string{"--help"})
+
+		if !errors.Is(err, flag.ErrHelp) {
 			t.Fatalf("Parse() error = %v, want %v", err, flag.ErrHelp)
 		}
-		if stdout.Len() == 0 {
-			t.Fatal("stdout is empty, want help output")
-		}
-		if stderr.Len() != 0 {
-			t.Fatalf("stderr = %q, want empty", stderr.String())
-		}
+		assertConfig(t, config, Config{})
+		assertStringContains(t, stdout, "Usage: pouch [flags] PATH...")
+		assertOutput(t, stderr, "")
 	})
 
-	t.Run("parses uppercase short verbose flag", func(t *testing.T) {
+	t.Run("version does not require paths", func(t *testing.T) {
 		t.Parallel()
-		var stdout bytes.Buffer
-		var stderr bytes.Buffer
 
-		config, err := Parse([]string{"-V", "sample"}, &stdout, &stderr)
+		config, stdout, stderr, err := parseForTest([]string{"-v"})
+
 		if err != nil {
 			t.Fatalf("Parse() error = %v", err)
 		}
-		if !config.Verbose {
-			t.Fatalf("config.Verbose = %v, want true", config.Verbose)
-		}
-	})
-
-	t.Run("parses version flag without requiring path", func(t *testing.T) {
-		t.Parallel()
-		var stdout bytes.Buffer
-		var stderr bytes.Buffer
-
-		config, err := Parse([]string{"-v"}, &stdout, &stderr)
-		if err != nil {
-			t.Fatalf("Parse() error = %v", err)
-		}
-		if !config.ShowVersion {
-			t.Fatalf("config.ShowVersion = %v, want true", config.ShowVersion)
-		}
-		if len(config.Paths) != 0 {
-			t.Fatalf("config.Paths = %+v, want empty", config.Paths)
-		}
+		assertConfig(t, config, Config{ShowVersion: true})
+		assertOutput(t, stdout, "")
+		assertOutput(t, stderr, "")
 	})
 }
 
-func parseForTest(t *testing.T, args []string) (Config, string, string) {
-	t.Helper()
+func parseForTest(args []string) (Config, string, string, error) {
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 
 	config, err := Parse(args, &stdout, &stderr)
-	if err != nil {
-		t.Fatalf("Parse() error = %v", err)
-	}
 
-	return config, stdout.String(), stderr.String()
+	return config, stdout.String(), stderr.String(), err
+}
+
+func assertConfig(t *testing.T, got, want Config) {
+	t.Helper()
+	assertPaths(t, got.Paths, want.Paths...)
+	if got.Options != want.Options {
+		t.Fatalf("Options = %+v, want %+v", got.Options, want.Options)
+	}
+	if got.Verbose != want.Verbose {
+		t.Fatalf("Verbose = %v, want %v", got.Verbose, want.Verbose)
+	}
+	if got.ShowVersion != want.ShowVersion {
+		t.Fatalf("ShowVersion = %v, want %v", got.ShowVersion, want.ShowVersion)
+	}
 }
 
 func assertPaths(t *testing.T, got []string, want ...string) {
 	t.Helper()
 	if len(got) != len(want) {
-		t.Fatalf("len(paths) = %d, want %d (%+v)", len(got), len(want), got)
+		t.Fatalf("len(paths) = %d, want %d: %+v", len(got), len(want), got)
 	}
 	for i := range want {
 		if got[i] != want[i] {
-			t.Fatalf("paths[%d] = %q, want %q (%+v)", i, got[i], want[i], got)
+			t.Fatalf("paths[%d] = %q, want %q: %+v", i, got[i], want[i], got)
 		}
 	}
 }
 
-func assertMode(t *testing.T, config Config, want pouch.Mode) {
+func assertOutput(t *testing.T, got, want string) {
 	t.Helper()
-	if config.Options.Mode != want {
-		t.Fatalf("config.Options.Mode = %v, want %v", config.Options.Mode, want)
+	if got != want {
+		t.Fatalf("output = %q, want %q", got, want)
 	}
 }
 
-func assertDryRun(t *testing.T, config Config, want bool) {
+func assertErrorContains(t *testing.T, err error, want string) {
 	t.Helper()
-	if config.Options.DryRun != want {
-		t.Fatalf("config.Options.DryRun = %v, want %v", config.Options.DryRun, want)
+	if err == nil {
+		t.Fatalf("error = nil, want message containing %q", want)
 	}
+	assertStringContains(t, err.Error(), want)
 }
 
-func assertStrict(t *testing.T, config Config, want bool) {
+func assertStringContains(t *testing.T, got, want string) {
 	t.Helper()
-	if config.Options.Strict != want {
-		t.Fatalf("config.Options.Strict = %v, want %v", config.Options.Strict, want)
-	}
-}
-
-func assertVerbose(t *testing.T, config Config, want bool) {
-	t.Helper()
-	if config.Verbose != want {
-		t.Fatalf("config.Verbose = %v, want %v", config.Verbose, want)
-	}
-}
-
-func assertOutputEmpty(t *testing.T, stdout, stderr string) {
-	t.Helper()
-	if stdout != "" || stderr != "" {
-		t.Fatalf("unexpected output: stdout=%q stderr=%q", stdout, stderr)
+	if !strings.Contains(got, want) {
+		t.Fatalf("%q does not contain %q", got, want)
 	}
 }

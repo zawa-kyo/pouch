@@ -8,354 +8,203 @@ import (
 	"testing"
 )
 
-func TestRunSilentOnSuccess(t *testing.T) {
+func TestRunCreatesPathsFromCLIArguments(t *testing.T) {
 	t.Parallel()
 
-	root := t.TempDir()
-	target := filepath.Join(root, "sample")
-	var stdout bytes.Buffer
-	var stderr bytes.Buffer
+	t.Run("auto mode is silent on success", func(t *testing.T) {
+		t.Parallel()
 
-	code := run([]string{target}, &stdout, &stderr)
-	if code != 0 {
-		t.Fatalf("run() code = %d, want 0", code)
-	}
-	if stdout.Len() != 0 {
-		t.Fatalf("stdout = %q, want empty", stdout.String())
-	}
-	if stderr.Len() != 0 {
-		t.Fatalf("stderr = %q, want empty", stderr.String())
-	}
+		root := t.TempDir()
+		target := filepath.Join(root, "sample")
+
+		result := runForTest([]string{target})
+
+		assertExitCode(t, result.code, 0)
+		assertOutput(t, result.stdout, "")
+		assertOutput(t, result.stderr, "")
+		assertDir(t, target)
+	})
+
+	t.Run("file shortcut applies to every path", func(t *testing.T) {
+		t.Parallel()
+
+		root := t.TempDir()
+		dockerfile := filepath.Join(root, "Dockerfile")
+		test := filepath.Join(root, "test")
+
+		result := runForTest([]string{dockerfile, test, "--file"})
+
+		assertExitCode(t, result.code, 0)
+		assertOutput(t, result.stdout, "")
+		assertOutput(t, result.stderr, "")
+		assertFile(t, dockerfile)
+		assertFile(t, test)
+	})
+
+	t.Run("directory shortcut applies to every path", func(t *testing.T) {
+		t.Parallel()
+
+		root := t.TempDir()
+		first := filepath.Join(root, "first.go")
+		second := filepath.Join(root, "second")
+
+		result := runForTest([]string{first, second, "--dir"})
+
+		assertExitCode(t, result.code, 0)
+		assertOutput(t, result.stdout, "")
+		assertOutput(t, result.stderr, "")
+		assertDir(t, first)
+		assertDir(t, second)
+	})
+
+	t.Run("dry-run leaves every planned path missing", func(t *testing.T) {
+		t.Parallel()
+
+		root := t.TempDir()
+		fileTarget := filepath.Join(root, "src", "main.go")
+		dirTarget := filepath.Join(root, "test")
+
+		result := runForTest([]string{fileTarget, dirTarget, "--dry-run"})
+
+		assertExitCode(t, result.code, 0)
+		assertOutput(t, result.stdout, "")
+		assertOutput(t, result.stderr, "")
+		assertMissing(t, filepath.Dir(fileTarget))
+		assertMissing(t, fileTarget)
+		assertMissing(t, dirTarget)
+	})
 }
 
-func TestRunWarnsOnFailure(t *testing.T) {
-	t.Parallel()
-
-	root := t.TempDir()
-	target := filepath.Join(root, "Dockerfile")
-	if err := os.Mkdir(target, 0o755); err != nil {
-		t.Fatal(err)
-	}
-
-	var stdout bytes.Buffer
-	var stderr bytes.Buffer
-
-	code := run([]string{"--mode", "file", target}, &stdout, &stderr)
-	if code != 1 {
-		t.Fatalf("run() code = %d, want 1", code)
-	}
-	if stdout.Len() != 0 {
-		t.Fatalf("stdout = %q, want empty", stdout.String())
-	}
-	if !strings.Contains(stderr.String(), warnPrefix) {
-		t.Fatalf("stderr = %q, want %q prefix", stderr.String(), warnPrefix)
-	}
-}
-
-func TestRunVerboseUsesInfoPrefix(t *testing.T) {
-	t.Parallel()
-
-	root := t.TempDir()
-	target := filepath.Join(root, "sample")
-	var stdout bytes.Buffer
-	var stderr bytes.Buffer
-
-	code := run([]string{"--verbose", target}, &stdout, &stderr)
-	if code != 0 {
-		t.Fatalf("run() code = %d, want 0", code)
-	}
-	if !strings.Contains(stdout.String(), infoPrefix) {
-		t.Fatalf("stdout = %q, want %q prefix", stdout.String(), infoPrefix)
-	}
-	if stderr.Len() != 0 {
-		t.Fatalf("stderr = %q, want empty", stderr.String())
-	}
-}
-
-func TestRunVerbosePrintsActionsInInputOrder(t *testing.T) {
-	t.Parallel()
-
-	root := t.TempDir()
-	first := filepath.Join(root, "first")
-	second := filepath.Join(root, "second.go")
-	var stdout bytes.Buffer
-	var stderr bytes.Buffer
-
-	code := run([]string{first, second, "--verbose"}, &stdout, &stderr)
-	if code != 0 {
-		t.Fatalf("run() code = %d, want 0", code)
-	}
-	if stderr.Len() != 0 {
-		t.Fatalf("stderr = %q, want empty", stderr.String())
-	}
-
-	output := stdout.String()
-	firstIndex := strings.Index(output, first)
-	secondIndex := strings.Index(output, second)
-	if firstIndex < 0 || secondIndex < 0 {
-		t.Fatalf("stdout = %q, want both paths", output)
-	}
-	if firstIndex > secondIndex {
-		t.Fatalf("stdout = %q, want paths in input order", output)
-	}
-}
-
-func TestRunVersionShortFlag(t *testing.T) {
-	t.Parallel()
-
-	var stdout bytes.Buffer
-	var stderr bytes.Buffer
-
-	code := run([]string{"-v"}, &stdout, &stderr)
-	if code != 0 {
-		t.Fatalf("run() code = %d, want 0", code)
-	}
-	if strings.TrimSpace(stdout.String()) != version {
-		t.Fatalf("stdout = %q, want %q", stdout.String(), version)
-	}
-	if stderr.Len() != 0 {
-		t.Fatalf("stderr = %q, want empty", stderr.String())
-	}
-}
-
-func TestRunHelpWritesUsageToStdout(t *testing.T) {
-	t.Parallel()
-
-	var stdout bytes.Buffer
-	var stderr bytes.Buffer
-
-	code := run([]string{"--help"}, &stdout, &stderr)
-	if code != 0 {
-		t.Fatalf("run() code = %d, want 0", code)
-	}
-	if !strings.Contains(stdout.String(), "Usage: pouch [flags] PATH...") {
-		t.Fatalf("stdout = %q, want usage", stdout.String())
-	}
-	if stderr.Len() != 0 {
-		t.Fatalf("stderr = %q, want empty", stderr.String())
-	}
-}
-
-func TestRunDryRunTrailingFlagDoesNotCreatePaths(t *testing.T) {
-	t.Parallel()
-
-	root := t.TempDir()
-	fileTarget := filepath.Join(root, "src", "main.go")
-	dirTarget := filepath.Join(root, "test")
-	var stdout bytes.Buffer
-	var stderr bytes.Buffer
-
-	code := run([]string{fileTarget, dirTarget, "--dry-run"}, &stdout, &stderr)
-	if code != 0 {
-		t.Fatalf("run() code = %d, want 0", code)
-	}
-	if stderr.Len() != 0 {
-		t.Fatalf("stderr = %q, want empty", stderr.String())
-	}
-	if _, err := os.Stat(fileTarget); !os.IsNotExist(err) {
-		t.Fatalf("fileTarget exists after dry run, err = %v", err)
-	}
-	if _, err := os.Stat(dirTarget); !os.IsNotExist(err) {
-		t.Fatalf("dirTarget exists after dry run, err = %v", err)
-	}
-}
-
-func TestRunDoubleDashTreatsFollowingFlagLikeArgumentAsPath(t *testing.T) {
+func TestRunDoubleDashAllowsFlagShapedPathArguments(t *testing.T) {
 	root := t.TempDir()
 	t.Chdir(root)
-	var stdout bytes.Buffer
-	var stderr bytes.Buffer
 
-	code := run([]string{"--", "--dry-run"}, &stdout, &stderr)
-	if code != 0 {
-		t.Fatalf("run() code = %d, want 0", code)
-	}
-	if stdout.Len() != 0 {
-		t.Fatalf("stdout = %q, want empty", stdout.String())
-	}
-	if stderr.Len() != 0 {
-		t.Fatalf("stderr = %q, want empty", stderr.String())
-	}
+	result := runForTest([]string{"--", "--dry-run"})
+
+	assertExitCode(t, result.code, 0)
+	assertOutput(t, result.stdout, "")
+	assertOutput(t, result.stderr, "")
 	assertDir(t, filepath.Join(root, "--dry-run"))
 }
 
-func TestRunStrictFailsForExistingPath(t *testing.T) {
+func TestRunWritesRequestedCommandOutput(t *testing.T) {
 	t.Parallel()
 
-	root := t.TempDir()
-	target := filepath.Join(root, "sample")
-	if err := os.Mkdir(target, 0o755); err != nil {
-		t.Fatal(err)
-	}
+	t.Run("verbose output lists actions in input order", func(t *testing.T) {
+		t.Parallel()
+
+		root := t.TempDir()
+		first := filepath.Join(root, "first")
+		second := filepath.Join(root, "second.go")
+
+		result := runForTest([]string{first, second, "--verbose"})
+
+		assertExitCode(t, result.code, 0)
+		assertLines(t, result.stdout,
+			formatResultLine("create dir", first),
+			formatResultLine("create file", second),
+		)
+		assertOutput(t, result.stderr, "")
+	})
+
+	t.Run("version prints only the version", func(t *testing.T) {
+		t.Parallel()
+
+		result := runForTest([]string{"-v"})
+
+		assertExitCode(t, result.code, 0)
+		assertOutput(t, strings.TrimSpace(result.stdout), version)
+		assertOutput(t, result.stderr, "")
+	})
+
+	t.Run("help prints usage to stdout", func(t *testing.T) {
+		t.Parallel()
+
+		result := runForTest([]string{"--help"})
+
+		assertExitCode(t, result.code, 0)
+		assertStringContains(t, result.stdout, "Usage: pouch [flags] PATH...")
+		assertOutput(t, result.stderr, "")
+	})
+}
+
+func TestRunReportsFailuresAndStopsAtFirstError(t *testing.T) {
+	t.Parallel()
+
+	t.Run("parse errors exit non-zero and write a warning", func(t *testing.T) {
+		t.Parallel()
+
+		result := runForTest([]string{"target", "--mode", "auto", "--file"})
+
+		assertExitCode(t, result.code, 1)
+		assertOutput(t, result.stdout, "")
+		assertWarningContains(t, result.stderr, "--mode cannot be used with --file or --dir")
+	})
+
+	t.Run("creation errors exit non-zero and leave later paths untouched", func(t *testing.T) {
+		t.Parallel()
+
+		root := t.TempDir()
+		first := filepath.Join(root, "first.go")
+		conflict := filepath.Join(root, "conflict")
+		later := filepath.Join(root, "later.go")
+		mkdir(t, conflict)
+
+		result := runForTest([]string{first, conflict, later, "--file"})
+
+		assertExitCode(t, result.code, 1)
+		assertOutput(t, result.stdout, "")
+		assertWarningContains(t, result.stderr, "path exists as directory")
+		assertFile(t, first)
+		assertMissing(t, later)
+	})
+
+	t.Run("verbose failure prints completed actions before the warning", func(t *testing.T) {
+		t.Parallel()
+
+		root := t.TempDir()
+		first := filepath.Join(root, "first.go")
+		conflict := filepath.Join(root, "conflict")
+		mkdir(t, conflict)
+
+		result := runForTest([]string{first, conflict, "--file", "--verbose"})
+
+		assertExitCode(t, result.code, 1)
+		assertLines(t, result.stdout, formatResultLine("create file", first))
+		assertWarningContains(t, result.stderr, "path exists as directory")
+	})
+}
+
+type runResult struct {
+	code   int
+	stdout string
+	stderr string
+}
+
+func runForTest(args []string) runResult {
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 
-	code := run([]string{target, "--strict"}, &stdout, &stderr)
-	if code != 1 {
-		t.Fatalf("run() code = %d, want 1", code)
-	}
-	if stdout.Len() != 0 {
-		t.Fatalf("stdout = %q, want empty", stdout.String())
-	}
-	if !strings.Contains(stderr.String(), "already exists") {
-		t.Fatalf("stderr = %q, want existing-path error", stderr.String())
+	code := run(args, &stdout, &stderr)
+
+	return runResult{
+		code:   code,
+		stdout: stdout.String(),
+		stderr: stderr.String(),
 	}
 }
 
-func TestRunFileFlagCreatesAmbiguousFile(t *testing.T) {
-	t.Parallel()
-
-	root := t.TempDir()
-	target := filepath.Join(root, "Dockerfile")
-	var stdout bytes.Buffer
-	var stderr bytes.Buffer
-
-	code := run([]string{target, "--file"}, &stdout, &stderr)
-	if code != 0 {
-		t.Fatalf("run() code = %d, want 0", code)
-	}
-	if stderr.Len() != 0 {
-		t.Fatalf("stderr = %q, want empty", stderr.String())
-	}
-	info, err := os.Stat(target)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if info.IsDir() {
-		t.Fatalf("%s is a directory, want file", target)
+func mkdir(t *testing.T, path string) {
+	t.Helper()
+	if err := os.MkdirAll(path, 0o755); err != nil {
+		t.Fatalf("os.MkdirAll(%q) error = %v", path, err)
 	}
 }
 
-func TestRunFileFlagAppliesToAllPaths(t *testing.T) {
-	t.Parallel()
-
-	root := t.TempDir()
-	dockerfile := filepath.Join(root, "Dockerfile")
-	test := filepath.Join(root, "test")
-	var stdout bytes.Buffer
-	var stderr bytes.Buffer
-
-	code := run([]string{dockerfile, test, "--file"}, &stdout, &stderr)
-	if code != 0 {
-		t.Fatalf("run() code = %d, want 0", code)
-	}
-	if stderr.Len() != 0 {
-		t.Fatalf("stderr = %q, want empty", stderr.String())
-	}
-	assertFile(t, dockerfile)
-	assertFile(t, test)
-}
-
-func TestRunDirFlagCreatesAmbiguousDirectory(t *testing.T) {
-	t.Parallel()
-
-	root := t.TempDir()
-	target := filepath.Join(root, "dir.with.dot")
-	var stdout bytes.Buffer
-	var stderr bytes.Buffer
-
-	code := run([]string{target, "--dir"}, &stdout, &stderr)
-	if code != 0 {
-		t.Fatalf("run() code = %d, want 0", code)
-	}
-	if stderr.Len() != 0 {
-		t.Fatalf("stderr = %q, want empty", stderr.String())
-	}
-	info, err := os.Stat(target)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !info.IsDir() {
-		t.Fatalf("%s is a file, want directory", target)
-	}
-}
-
-func TestRunDirFlagAppliesToAllPaths(t *testing.T) {
-	t.Parallel()
-
-	root := t.TempDir()
-	first := filepath.Join(root, "first.go")
-	second := filepath.Join(root, "second")
-	var stdout bytes.Buffer
-	var stderr bytes.Buffer
-
-	code := run([]string{first, second, "--dir"}, &stdout, &stderr)
-	if code != 0 {
-		t.Fatalf("run() code = %d, want 0", code)
-	}
-	if stderr.Len() != 0 {
-		t.Fatalf("stderr = %q, want empty", stderr.String())
-	}
-	assertDir(t, first)
-	assertDir(t, second)
-}
-
-func TestRunModeFlagAppliesToAllPaths(t *testing.T) {
-	t.Parallel()
-
-	root := t.TempDir()
-	first := filepath.Join(root, "first")
-	second := filepath.Join(root, "second.go")
-	var stdout bytes.Buffer
-	var stderr bytes.Buffer
-
-	code := run([]string{first, second, "--mode", "dir"}, &stdout, &stderr)
-	if code != 0 {
-		t.Fatalf("run() code = %d, want 0", code)
-	}
-	if stderr.Len() != 0 {
-		t.Fatalf("stderr = %q, want empty", stderr.String())
-	}
-	assertDir(t, first)
-	assertDir(t, second)
-}
-
-func TestRunRejectsModeShortcutConflict(t *testing.T) {
-	t.Parallel()
-
-	root := t.TempDir()
-	target := filepath.Join(root, "Dockerfile")
-	var stdout bytes.Buffer
-	var stderr bytes.Buffer
-
-	code := run([]string{target, "--mode", "auto", "--file"}, &stdout, &stderr)
-	if code != 1 {
-		t.Fatalf("run() code = %d, want 1", code)
-	}
-	if stdout.Len() != 0 {
-		t.Fatalf("stdout = %q, want empty", stdout.String())
-	}
-	if !strings.Contains(stderr.String(), "--mode cannot be used with --file or --dir") {
-		t.Fatalf("stderr = %q, want mode shortcut conflict", stderr.String())
-	}
-}
-
-func TestRunStopsAtFirstError(t *testing.T) {
-	t.Parallel()
-
-	root := t.TempDir()
-	first := filepath.Join(root, "first.go")
-	conflict := filepath.Join(root, "conflict")
-	later := filepath.Join(root, "later.go")
-	if err := os.Mkdir(conflict, 0o755); err != nil {
-		t.Fatal(err)
-	}
-	var stdout bytes.Buffer
-	var stderr bytes.Buffer
-
-	code := run([]string{first, conflict, later, "--file"}, &stdout, &stderr)
-	if code != 1 {
-		t.Fatalf("run() code = %d, want 1", code)
-	}
-	if stdout.Len() != 0 {
-		t.Fatalf("stdout = %q, want empty", stdout.String())
-	}
-	if stderr.Len() == 0 {
-		t.Fatal("stderr is empty, want error output")
-	}
-	assertFile(t, first)
-	if _, err := os.Stat(later); !os.IsNotExist(err) {
-		t.Fatalf("later path exists after first error, err = %v", err)
+func assertExitCode(t *testing.T, got, want int) {
+	t.Helper()
+	if got != want {
+		t.Fatalf("exit code = %d, want %d", got, want)
 	}
 }
 
@@ -363,10 +212,10 @@ func assertFile(t *testing.T, path string) {
 	t.Helper()
 	info, err := os.Stat(path)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("os.Stat(%q) error = %v", path, err)
 	}
 	if info.IsDir() {
-		t.Fatalf("%s is a directory, want file", path)
+		t.Fatalf("%q is a directory, want file", path)
 	}
 }
 
@@ -374,9 +223,56 @@ func assertDir(t *testing.T, path string) {
 	t.Helper()
 	info, err := os.Stat(path)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("os.Stat(%q) error = %v", path, err)
 	}
 	if !info.IsDir() {
-		t.Fatalf("%s is a file, want directory", path)
+		t.Fatalf("%q is a file, want directory", path)
 	}
+}
+
+func assertMissing(t *testing.T, path string) {
+	t.Helper()
+	if _, err := os.Stat(path); !os.IsNotExist(err) {
+		t.Fatalf("os.Stat(%q) error = %v, want missing path", path, err)
+	}
+}
+
+func assertOutput(t *testing.T, got, want string) {
+	t.Helper()
+	if got != want {
+		t.Fatalf("output = %q, want %q", got, want)
+	}
+}
+
+func assertLines(t *testing.T, got string, want ...string) {
+	t.Helper()
+	lines := strings.Split(strings.TrimSpace(got), "\n")
+	if len(lines) == 1 && lines[0] == "" {
+		lines = nil
+	}
+	if len(lines) != len(want) {
+		t.Fatalf("lines = %+v, want %+v", lines, want)
+	}
+	for i := range want {
+		if lines[i] != want[i] {
+			t.Fatalf("lines[%d] = %q, want %q", i, lines[i], want[i])
+		}
+	}
+}
+
+func assertWarningContains(t *testing.T, got, want string) {
+	t.Helper()
+	assertStringContains(t, got, warnPrefix)
+	assertStringContains(t, got, want)
+}
+
+func assertStringContains(t *testing.T, got, want string) {
+	t.Helper()
+	if !strings.Contains(got, want) {
+		t.Fatalf("%q does not contain %q", got, want)
+	}
+}
+
+func formatResultLine(action, path string) string {
+	return infoPrefix + " " + action + " " + path
 }

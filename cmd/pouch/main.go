@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"flag"
 	"fmt"
 	"io"
 	"os"
@@ -22,14 +23,10 @@ func main() {
 func run(args []string, stdout, stderr io.Writer) int {
 	config, err := cli.Parse(args, stdout, stderr)
 	if err != nil {
-		if errors.Is(err, os.ErrInvalid) {
-			warn(stderr, err)
-		} else if err.Error() != "flag: help requested" {
-			warn(stderr, err)
-		}
-		if err.Error() == "flag: help requested" {
+		if errors.Is(err, flag.ErrHelp) {
 			return 0
 		}
+		warn(stderr, err)
 		return 1
 	}
 	if config.ShowVersion {
