@@ -21,7 +21,7 @@ func TestCreateAuto(t *testing.T) {
 			name: "creates directory in auto mode",
 			path: func(root string) string { return filepath.Join(root, "sample") },
 			verify: func(t *testing.T, path string, result Result) {
-				assertResult(t, result, KindDir, ActionCreateDir)
+				assertResult(t, result, path, KindDir, ActionCreateDir)
 				assertDirExists(t, path)
 			},
 		},
@@ -29,7 +29,7 @@ func TestCreateAuto(t *testing.T) {
 			name: "creates file in auto mode",
 			path: func(root string) string { return filepath.Join(root, "sample.ts") },
 			verify: func(t *testing.T, path string, result Result) {
-				assertResult(t, result, KindFile, ActionCreateFile)
+				assertResult(t, result, path, KindFile, ActionCreateFile)
 				assertFileExists(t, path)
 			},
 		},
@@ -37,7 +37,7 @@ func TestCreateAuto(t *testing.T) {
 			name: "creates parent directory for file",
 			path: func(root string) string { return filepath.Join(root, "sample", "temp.ts") },
 			verify: func(t *testing.T, path string, result Result) {
-				assertAction(t, result, ActionCreateFile)
+				assertResult(t, result, path, KindFile, ActionCreateFile)
 				assertDirExists(t, filepath.Dir(path))
 				assertFileExists(t, path)
 			},
@@ -48,7 +48,7 @@ func TestCreateAuto(t *testing.T) {
 				return filepath.Join(root, "dir.with.dot") + string(filepath.Separator)
 			},
 			verify: func(t *testing.T, path string, result Result) {
-				assertResult(t, result, KindDir, ActionCreateDir)
+				assertResult(t, result, path, KindDir, ActionCreateDir)
 				assertDirExists(t, filepath.Clean(path))
 			},
 		},
@@ -61,7 +61,7 @@ func TestCreateAuto(t *testing.T) {
 				}
 			},
 			verify: func(t *testing.T, path string, result Result) {
-				assertResult(t, result, KindFile, ActionSkipExisting)
+				assertResult(t, result, path, KindFile, ActionSkipExisting)
 				assertFileContent(t, path, "original")
 			},
 		},
@@ -73,8 +73,8 @@ func TestCreateAuto(t *testing.T) {
 					t.Fatal(err)
 				}
 			},
-			verify: func(t *testing.T, _ string, result Result) {
-				assertResult(t, result, KindDir, ActionSkipExisting)
+			verify: func(t *testing.T, path string, result Result) {
+				assertResult(t, result, path, KindDir, ActionSkipExisting)
 			},
 		},
 		{
@@ -138,9 +138,7 @@ func TestCreateModeOverrides(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Create() error = %v", err)
 		}
-		if result.Kind != KindFile || result.Action != ActionCreateFile {
-			t.Fatalf("unexpected result: %+v", result)
-		}
+		assertResult(t, result, path, KindFile, ActionCreateFile)
 		assertFileExists(t, path)
 	})
 
@@ -153,9 +151,7 @@ func TestCreateModeOverrides(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Create() error = %v", err)
 		}
-		if result.Kind != KindDir || result.Action != ActionCreateDir {
-			t.Fatalf("unexpected result: %+v", result)
-		}
+		assertResult(t, result, path, KindDir, ActionCreateDir)
 		assertDirExists(t, path)
 	})
 }
@@ -172,12 +168,9 @@ func TestCreateDryRun(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Create() error = %v", err)
 		}
-		if result.Action != ActionCreateFile || result.Kind != KindFile {
-			t.Fatalf("unexpected result: %+v", result)
-		}
-		if _, err := os.Stat(path); !os.IsNotExist(err) {
-			t.Fatalf("expected file not to exist, got err=%v", err)
-		}
+		assertResult(t, result, path, KindFile, ActionCreateFile)
+		assertPathMissing(t, filepath.Dir(path))
+		assertPathMissing(t, path)
 	})
 
 	t.Run("dry run reports intended directory creation", func(t *testing.T) {
@@ -189,12 +182,8 @@ func TestCreateDryRun(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Create() error = %v", err)
 		}
-		if result.Action != ActionCreateDir || result.Kind != KindDir {
-			t.Fatalf("unexpected result: %+v", result)
-		}
-		if _, err := os.Stat(path); !os.IsNotExist(err) {
-			t.Fatalf("expected directory not to exist, got err=%v", err)
-		}
+		assertResult(t, result, path, KindDir, ActionCreateDir)
+		assertPathMissing(t, path)
 	})
 }
 
@@ -257,9 +246,10 @@ func TestCreateMany(t *testing.T) {
 	if len(results) != 2 {
 		t.Fatalf("len(results) = %d, want 2", len(results))
 	}
-	if results[0].Action != ActionCreateDir || results[1].Action != ActionCreateFile {
-		t.Fatalf("unexpected results: %+v", results)
-	}
+	assertResult(t, results[0], paths[0], KindDir, ActionCreateDir)
+	assertResult(t, results[1], paths[1], KindFile, ActionCreateFile)
+	assertDirExists(t, paths[0])
+	assertFileExists(t, paths[1])
 
 	t.Run("returns partial results before failure", func(t *testing.T) {
 		t.Parallel()
@@ -282,12 +272,8 @@ func TestCreateMany(t *testing.T) {
 		if len(results) != 1 {
 			t.Fatalf("len(results) = %d, want 1", len(results))
 		}
-		if results[0].Action != ActionCreateFile {
-			t.Fatalf("unexpected partial result: %+v", results[0])
-		}
-		if _, err := os.Stat(later); !os.IsNotExist(err) {
-			t.Fatalf("later path exists after first error, err = %v", err)
-		}
+		assertResult(t, results[0], paths[0], KindFile, ActionCreateFile)
+		assertPathMissing(t, later)
 	})
 }
 
@@ -324,16 +310,16 @@ func assertFileContent(t *testing.T, path, want string) {
 	}
 }
 
-func assertResult(t *testing.T, result Result, wantKind Kind, wantAction Action) {
+func assertPathMissing(t *testing.T, path string) {
 	t.Helper()
-	if result.Kind != wantKind || result.Action != wantAction {
-		t.Fatalf("unexpected result: %+v", result)
+	if _, err := os.Stat(path); !os.IsNotExist(err) {
+		t.Fatalf("%q exists, want missing path, err = %v", path, err)
 	}
 }
 
-func assertAction(t *testing.T, result Result, want Action) {
+func assertResult(t *testing.T, result Result, wantPath string, wantKind Kind, wantAction Action) {
 	t.Helper()
-	if result.Action != want {
-		t.Fatalf("unexpected action: %+v", result)
+	if result.Path != wantPath || result.Kind != wantKind || result.Action != wantAction {
+		t.Fatalf("unexpected result: %+v", result)
 	}
 }

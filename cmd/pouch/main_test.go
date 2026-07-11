@@ -89,14 +89,15 @@ func TestRunVerbosePrintsActionsInInputOrder(t *testing.T) {
 		t.Fatalf("stderr = %q, want empty", stderr.String())
 	}
 
-	output := stdout.String()
-	firstIndex := strings.Index(output, first)
-	secondIndex := strings.Index(output, second)
-	if firstIndex < 0 || secondIndex < 0 {
-		t.Fatalf("stdout = %q, want both paths", output)
+	lines := nonEmptyLines(stdout.String())
+	if len(lines) != 2 {
+		t.Fatalf("stdout lines = %+v, want two action lines", lines)
 	}
-	if firstIndex > secondIndex {
-		t.Fatalf("stdout = %q, want paths in input order", output)
+	if lines[0] != formatResultLine("create dir", first) {
+		t.Fatalf("first line = %q, want create action for first path", lines[0])
+	}
+	if lines[1] != formatResultLine("create file", second) {
+		t.Fatalf("second line = %q, want create action for second path", lines[1])
 	}
 }
 
@@ -354,9 +355,7 @@ func TestRunStopsAtFirstError(t *testing.T) {
 		t.Fatal("stderr is empty, want error output")
 	}
 	assertFile(t, first)
-	if _, err := os.Stat(later); !os.IsNotExist(err) {
-		t.Fatalf("later path exists after first error, err = %v", err)
-	}
+	assertPathMissing(t, later)
 }
 
 func assertFile(t *testing.T, path string) {
@@ -379,4 +378,23 @@ func assertDir(t *testing.T, path string) {
 	if !info.IsDir() {
 		t.Fatalf("%s is a file, want directory", path)
 	}
+}
+
+func assertPathMissing(t *testing.T, path string) {
+	t.Helper()
+	if _, err := os.Stat(path); !os.IsNotExist(err) {
+		t.Fatalf("%s exists, want missing path, err = %v", path, err)
+	}
+}
+
+func nonEmptyLines(output string) []string {
+	lines := strings.Split(strings.TrimSpace(output), "\n")
+	if len(lines) == 1 && lines[0] == "" {
+		return nil
+	}
+	return lines
+}
+
+func formatResultLine(action, path string) string {
+	return infoPrefix + " " + action + " " + path
 }

@@ -60,6 +60,14 @@ func TestParseSuccess(t *testing.T) {
 			},
 		},
 		{
+			name: "parses short inline mode flag",
+			args: []string{"Dockerfile", "-m=file"},
+			verify: func(t *testing.T, config Config, _, _ string) {
+				assertPaths(t, config.Paths, "Dockerfile")
+				assertMode(t, config, pouch.ModeFile)
+			},
+		},
+		{
 			name: "parses file mode flag",
 			args: []string{"Dockerfile", "--file"},
 			verify: func(t *testing.T, config Config, _, _ string) {
@@ -128,6 +136,9 @@ func TestParseErrors(t *testing.T) {
 		if err == nil {
 			t.Fatal("expected error")
 		}
+		if err.Error() != "PATH... is required" {
+			t.Fatalf("Parse() error = %v, want required path error", err)
+		}
 	})
 
 	t.Run("rejects invalid mode", func(t *testing.T) {
@@ -138,6 +149,9 @@ func TestParseErrors(t *testing.T) {
 		_, err := Parse([]string{"--mode", "weird", "sample"}, &stdout, &stderr)
 		if err == nil {
 			t.Fatal("expected error")
+		}
+		if err.Error() != `invalid mode "weird": must be auto, file, or dir` {
+			t.Fatalf("Parse() error = %v, want invalid mode error", err)
 		}
 	})
 
@@ -167,6 +181,9 @@ func TestParseErrors(t *testing.T) {
 		if err == nil {
 			t.Fatal("expected error")
 		}
+		if err.Error() != "--file and --dir cannot be used together" {
+			t.Fatalf("Parse() error = %v, want shortcut conflict", err)
+		}
 	})
 
 	t.Run("rejects mode with file shortcut", func(t *testing.T) {
@@ -178,6 +195,9 @@ func TestParseErrors(t *testing.T) {
 		if err == nil {
 			t.Fatal("expected error")
 		}
+		if err.Error() != "--mode cannot be used with --file or --dir" {
+			t.Fatalf("Parse() error = %v, want mode shortcut conflict", err)
+		}
 	})
 
 	t.Run("rejects short mode with dir shortcut", func(t *testing.T) {
@@ -188,6 +208,9 @@ func TestParseErrors(t *testing.T) {
 		_, err := Parse([]string{"dir.with.dot", "-m", "file", "--dir"}, &stdout, &stderr)
 		if err == nil {
 			t.Fatal("expected error")
+		}
+		if err.Error() != "--mode cannot be used with --file or --dir" {
+			t.Fatalf("Parse() error = %v, want mode shortcut conflict", err)
 		}
 	})
 }
