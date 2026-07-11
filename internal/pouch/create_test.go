@@ -148,47 +148,53 @@ func TestCreateRejectsConflictingTargets(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name    string
-		path    func(string) string
-		prepare func(*testing.T, string)
-		options Options
-		wantErr string
+		name        string
+		path        func(string) string
+		prepare     func(*testing.T, string)
+		options     Options
+		wantErr     string
+		assertAfter func(*testing.T, string)
 	}{
 		{
-			name:    "strict mode rejects an existing file",
-			path:    func(root string) string { return filepath.Join(root, "sample.go") },
-			prepare: func(t *testing.T, path string) { writeFile(t, path, "original") },
-			options: Options{Strict: true},
-			wantErr: "path already exists",
+			name:        "strict mode rejects an existing file without changing its content",
+			path:        func(root string) string { return filepath.Join(root, "sample.go") },
+			prepare:     func(t *testing.T, path string) { writeFile(t, path, "original") },
+			options:     Options{Strict: true},
+			wantErr:     "path already exists",
+			assertAfter: func(t *testing.T, path string) { assertFileContent(t, path, "original") },
 		},
 		{
-			name:    "strict mode rejects an existing directory",
-			path:    func(root string) string { return filepath.Join(root, "sample") },
-			prepare: func(t *testing.T, path string) { mkdir(t, path) },
-			options: Options{Strict: true},
-			wantErr: "path already exists",
+			name:        "strict mode rejects an existing directory without replacing it",
+			path:        func(root string) string { return filepath.Join(root, "sample") },
+			prepare:     func(t *testing.T, path string) { mkdir(t, path) },
+			options:     Options{Strict: true},
+			wantErr:     "path already exists",
+			assertAfter: assertDir,
 		},
 		{
-			name:    "file mode rejects an existing directory",
-			path:    func(root string) string { return filepath.Join(root, "target") },
-			prepare: func(t *testing.T, path string) { mkdir(t, path) },
-			options: Options{Mode: ModeFile},
-			wantErr: "path exists as directory",
+			name:        "file mode rejects an existing directory without replacing it",
+			path:        func(root string) string { return filepath.Join(root, "target") },
+			prepare:     func(t *testing.T, path string) { mkdir(t, path) },
+			options:     Options{Mode: ModeFile},
+			wantErr:     "path exists as directory",
+			assertAfter: assertDir,
 		},
 		{
-			name:    "directory mode rejects an existing file",
-			path:    func(root string) string { return filepath.Join(root, "target") },
-			prepare: func(t *testing.T, path string) { writeFile(t, path, "original") },
-			options: Options{Mode: ModeDir},
-			wantErr: "path exists as file",
+			name:        "directory mode rejects an existing file without changing its content",
+			path:        func(root string) string { return filepath.Join(root, "target") },
+			prepare:     func(t *testing.T, path string) { writeFile(t, path, "original") },
+			options:     Options{Mode: ModeDir},
+			wantErr:     "path exists as file",
+			assertAfter: func(t *testing.T, path string) { assertFileContent(t, path, "original") },
 		},
 		{
 			name: "file mode rejects a trailing separator before writing anything",
 			path: func(root string) string {
 				return filepath.Join(root, "target") + string(filepath.Separator)
 			},
-			options: Options{Mode: ModeFile},
-			wantErr: "trailing slash is only valid for directories",
+			options:     Options{Mode: ModeFile},
+			wantErr:     "trailing slash is only valid for directories",
+			assertAfter: func(t *testing.T, path string) { assertMissing(t, filepath.Clean(path)) },
 		},
 	}
 
@@ -202,12 +208,10 @@ func TestCreateRejectsConflictingTargets(t *testing.T) {
 				tt.prepare(t, filepath.Clean(path))
 			}
 
-			result, err := Create(path, tt.options)
+			_, err := Create(path, tt.options)
 
 			assertErrorContains(t, err, tt.wantErr)
-			if result != (Result{}) {
-				t.Fatalf("Create() result = %+v, want zero result on error", result)
-			}
+			tt.assertAfter(t, path)
 		})
 	}
 }
